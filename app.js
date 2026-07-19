@@ -1,4 +1,31 @@
+import { firebaseConfig, ADMIN_EMAIL } from "./firebase-config.js";
 
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInAnonymously,
+  signInWithEmailAndPassword,
+  signOut
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  writeBatch
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 const STORAGE_KEYS = {
   nickname: "wordPuzzleNickname"
 };
