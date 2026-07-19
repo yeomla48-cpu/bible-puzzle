@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email == "admin@example.com";
+    }
+
+    match /records/{recordId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.nickname is string
+        && request.resource.data.book is string
+        && request.resource.data.startChapter is int
+        && request.resource.data.endChapter is int
+        && request.resource.data.chapterCount is int
+        && request.resource.data.chapterCount >= 1
+        && request.resource.data.chapterCount <= 150
+        && request.resource.data.reflection is string
+        && request.resource.data.reflection.size() <= 150;
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /photos/{photoId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

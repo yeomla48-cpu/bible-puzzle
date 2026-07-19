@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="청년부 성경일독 공동 퍼즐 프로젝트" />
+  <title>말씀의 발자취</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">2027 청년부 성경일독 프로젝트</p>
+      <h1>말씀의 발자취</h1>
+      <p class="subtitle">한 장의 말씀, 한 조각의 믿음</p>
+    </div>
+    <div class="header-actions">
+      <button id="adminOpenButton" class="secondary-button" type="button">
+        관리자
+      </button>
+      <button id="changeUserButton" class="secondary-button hidden" type="button">
+        닉네임 변경
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="firebaseStatus" class="connection-banner">
+      <span class="connection-dot"></span>
+      <div>
+        <strong id="firebaseStatusTitle">Firebase 연결 확인 중</strong>
+        <p id="firebaseStatusText">잠시만 기다려 주세요.</p>
+      </div>
+    </section>
+    <section id="loginSection" class="card login-card">
+      <div class="card-heading">
+        <span class="icon">🌱</span>
+        <div>
+          <h2>말씀 여정 시작하기</h2>
+          <p>닉네임만 입력하면 바로 참여할 수 있습니다.</p>
+        </div>
+      </div>
+
+      <form id="loginForm" class="stack-form">
+        <label for="nickname">닉네임</label>
+        <div class="inline-form">
+          <input
+            id="nickname"
+            name="nickname"
+            type="text"
+            maxlength="12"
+            autocomplete="off"
+            placeholder="예: 행도리"
+            required
+          />
+          <button type="submit">시작하기</button>
+        </div>
+        <p id="loginError" class="error-message" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section id="appSection" class="hidden">
+      <section class="welcome-panel">
+        <div>
+          <p class="eyebrow">오늘도 말씀 한 조각</p>
+          <h2><span id="currentNickname"></span>님, 반가워요!</h2>
+        </div>
+        <div class="date-badge" id="todayLabel"></div>
+      </section>
+
+      <section class="stats-grid" aria-label="읽기 현황">
+        <article class="stat-card">
+          <span>전체 읽은 장</span>
+          <strong id="totalChapters">0장</strong>
+        </article>
+        <article class="stat-card">
+          <span>오늘 읽은 장</span>
+          <strong id="todayChapters">0장</strong>
+        </article>
+        <article class="stat-card">
+          <span>나의 읽은 장</span>
+          <strong id="myChapters">0장</strong>
+        </article>
+        <article class="stat-card">
+          <span>퍼즐 진행률</span>
+          <strong id="progressPercent">0%</strong>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">공동 퍼즐</p>
+            <h2 id="activePhotoTitle">등록된 퍼즐 사진이 없습니다</h2>
+          </div>
+          <span id="pieceCounter" class="piece-counter">0 / 1,189</span>
+        </div>
+
+        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="1189">
+          <div id="progressBar" class="progress-bar"></div>
+        </div>
+
+        <div id="photoPuzzle" class="photo-puzzle">
+          <img id="activePhotoImage" class="active-photo hidden" alt="공동 퍼즐 사진" />
+          <div id="photoCoverGrid" class="photo-cover-grid hidden" aria-hidden="true"></div>
+          <div id="noPhotoState" class="no-photo-state">
+            <span>📷</span>
+            <strong>관리자가 퍼즐 사진을 등록하면 여기에 표시됩니다.</strong>
+            <small>상단의 관리자 버튼에서 사진을 추가할 수 있습니다.</small>
+          </div>
+        </div>
+<p class="helper-text">
+          사진은 원본 비율을 유지해 잘리지 않으며, 성경 1장마다 1조각이 무작위로 공개됩니다.
+          공개된 조각을 누르면 해당 조각을 연 말씀 기록을 확인할 수 있습니다.
+        </p>
+      </section>
+
+      <div class="two-column">
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">오늘의 인증</p>
+              <h2>성경 읽기 기록</h2>
+            </div>
+          </div>
+
+          <form id="readingForm" class="stack-form">
+            <label for="bookSelect">성경</label>
+            <select id="bookSelect" required></select>
+
+            <div class="chapter-grid">
+              <label for="startChapter">
+                시작 장
+                <input id="startChapter" type="number" min="1" value="1" required />
+              </label>
+              <label for="endChapter">
+                끝 장
+                <input id="endChapter" type="number" min="1" value="1" required />
+              </label>
+            </div>
+
+            <div id="chapterInfo" class="chapter-info">총 1장 읽기</div>
+
+            <label for="reflection">한 줄 묵상 <span class="optional">(선택)</span></label>
+            <textarea
+              id="reflection"
+              rows="3"
+              maxlength="150"
+              placeholder="오늘 마음에 남은 내용을 적어보세요."
+            ></textarea>
+<button type="submit" class="primary-button">읽기 인증하기</button>
+            <p id="readingError" class="error-message" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">최근 기록</p>
+              <h2>우리의 말씀 발자취</h2>
+            </div>
+            <button id="clearRecordsButton" class="text-button hidden" type="button">
+              테스트 기록 삭제
+            </button>
+          </div>
+
+          <div id="emptyRecords" class="empty-state">
+            <span>📖</span>
+            <p>아직 등록된 읽기 기록이 없습니다.</p>
+          </div>
+
+          <div id="recordList" class="record-list"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+
+  <div id="adminModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
+    <div class="modal-backdrop" data-close-admin></div>
+    <section class="modal-panel">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">관리자 전용</p>
+          <h2 id="adminModalTitle">관리자 설정</h2>
+        </div>
+        <button id="adminCloseButton" class="icon-button" type="button" aria-label="닫기">×</button>
+      </div>
+<section id="adminLoginSection" class="admin-section hidden">
+        <h3>관리자 로그인</h3>
+        <form id="adminLoginForm" class="stack-form">
+          <label for="adminPassword">관리자 비밀번호</label>
+          <input id="adminPassword" type="password" minlength="6" autocomplete="current-password" required />
+          <button type="submit">로그인</button>
+          <p id="adminLoginError" class="error-message" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section id="adminDashboardSection" class="admin-section hidden">
+        <div class="admin-toolbar">
+          <div>
+            <h3>사진 관리</h3>
+            <p class="helper-text">GitHub에 올린 사진 주소를 등록하고 현재 퍼즐 사진을 선택할 수 있습니다.</p>
+          </div>
+          <button id="adminLogoutButton" class="secondary-button" type="button">관리자 로그아웃</button>
+        </div>
+
+        <form id="photoUploadForm" class="photo-upload-form">
+          <label for="photoTitle">
+            사진 제목
+            <input id="photoTitle" type="text" maxlength="40"
+              placeholder="예: 2027 청년부 단체사진" required />
+          </label>
+
+          <label for="photoUrl">
+            GitHub 이미지 주소
+            <input id="photoUrl" type="url"
+              placeholder="https://.../puzzles/photo1.jpg" required />
+          </label>
+
+          <button type="submit">사진 등록하기</button>
+          <p id="photoUploadError" class="error-message" aria-live="polite"></p>
+        </form>
+
+        <div class="admin-divider"></div>
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">등록된 사진</p>
+            <h3>퍼즐 사진 목록</h3>
+          </div>
+          <span id="photoCountBadge" class="piece-counter">0장</span>
+        </div>
+
+        <div id="emptyPhotoList" class="empty-state small-empty">
+          <span>🖼️</span>
+          <p>등록된 사진이 없습니다.</p>
+        </div>
+        <div id="adminPhotoList" class="admin-photo-list"></div>
+      </section>
+    </section>
+  </div>
+
+
+  <div id="pieceModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="pieceModalTitle">
+    <div class="modal-backdrop" data-close-piece></div>
+    <section class="modal-panel piece-modal-panel">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">말씀 퍼즐 조각</p>
+          <h2 id="pieceModalTitle">조각 정보</h2>
+        </div>
+        <button id="pieceCloseButton" class="icon-button" type="button" aria-label="닫기">×</button>
+      </div>
+
+      <div class="piece-detail">
+        <div class="piece-number-badge" id="pieceNumberBadge">#1</div>
+        <dl class="piece-detail-list">
+          <div>
+            <dt>읽은 사람</dt>
+            <dd id="pieceNickname">-</dd>
+          </div>
+          <div>
+            <dt>읽은 말씀</dt>
+            <dd id="piecePassage">-</dd>
+          </div>
+          <div>
+            <dt>인증 날짜</dt>
+            <dd id="pieceDate">-</dd>
+          </div>
+          <div id="pieceReflectionRow">
+            <dt>한 줄 묵상</dt>
+            <dd id="pieceReflection">-</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
