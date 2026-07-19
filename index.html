@@ -200,26 +200,60 @@
         <div class="admin-toolbar">
           <div>
             <h3>사진 관리</h3>
-            <p class="helper-text">GitHub에 올린 사진 주소를 등록하고 현재 퍼즐 사진을 선택할 수 있습니다.</p>
+            <p class="helper-text">사진을 선택해 미리 확인한 뒤, 같은 파일을 GitHub puzzles 폴더에 올리고 등록할 수 있습니다.</p>
           </div>
           <button id="adminLogoutButton" class="secondary-button" type="button">관리자 로그아웃</button>
         </div>
 
-        <form id="photoUploadForm" class="photo-upload-form">
-          <label for="photoTitle">
-            사진 제목
-            <input id="photoTitle" type="text" maxlength="40"
-              placeholder="예: 2027 청년부 단체사진" required />
-          </label>
+        <form id="photoUploadForm" class="photo-picker-form">
+          <div class="photo-picker-layout">
+            <section class="photo-picker-main">
+              <label class="file-picker-box" for="photoFile">
+                <span class="file-picker-icon">📷</span>
+                <strong>퍼즐 사진 선택</strong>
+                <small>JPG, PNG, WEBP · 최대 10MB</small>
+                <span class="file-picker-button">사진 선택하기</span>
+                <input id="photoFile" type="file"
+                  accept="image/jpeg,image/png,image/webp" hidden required />
+              </label>
 
-          <label for="photoUrl">
-            GitHub 이미지 주소
-            <input id="photoUrl" type="url"
-              placeholder="https://.../puzzles/photo1.jpg" required />
-          </label>
+              <div id="photoPreviewBox" class="photo-preview-box hidden">
+                <img id="photoPreviewImage" alt="선택한 퍼즐 사진 미리보기" />
+                <div class="photo-preview-meta">
+                  <strong id="photoFileName">선택된 파일</strong>
+                  <span id="photoFileInfo"></span>
+                </div>
+              </div>
+            </section>
 
-          <button type="submit">사진 등록하기</button>
-          <p id="photoUploadError" class="error-message" aria-live="polite"></p>
+            <section class="photo-picker-fields">
+              <label for="photoTitle">
+                퍼즐 이름
+                <input id="photoTitle" type="text" maxlength="40"
+                  placeholder="예: 2027 여름수련회" required />
+              </label>
+
+              <div class="github-upload-guide">
+                <strong>① 같은 사진을 GitHub에 먼저 올려주세요.</strong>
+                <p>아래 버튼을 누르면 이 저장소의 puzzles 폴더 업로드 화면이 열립니다.</p>
+                <a class="secondary-button github-upload-link"
+                  href="https://github.com/yeomla48-cpu/bible-puzzle/upload/main/puzzles"
+                  target="_blank" rel="noopener noreferrer">
+                  GitHub에 사진 올리기
+                </a>
+              </div>
+
+              <div class="auto-path-box">
+                <span>자동 등록 주소</span>
+                <code id="photoAutoPath">사진을 선택하면 자동으로 만들어집니다.</code>
+              </div>
+
+              <button id="photoRegisterButton" type="submit" disabled>
+                퍼즐 사진 등록하기
+              </button>
+              <p id="photoUploadError" class="error-message" aria-live="polite"></p>
+            </section>
+          </div>
         </form>
 
         <div class="admin-divider"></div>
@@ -279,6 +313,6 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=4"></script>
 </body>
 </html>
