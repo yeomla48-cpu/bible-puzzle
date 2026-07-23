@@ -1093,3 +1093,44 @@ textarea:disabled {
 #photoCoverGrid.photo-cover-grid.hidden {
   display: none;
 }
+
+
+/* v3.2: Canvas 기반 퍼즐 표시 */
+#photoPuzzle.photo-puzzle {
+  display: block;
+  min-height: 180px;
+  background: #e8e4da;
+}
+
+#photoCoverGrid.photo-cover-grid {
+  position: relative;
+  inset: auto;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: auto;
+  padding: 0;
+  background: #e8e4da;
+}
+
+#photoCoverGrid.photo-cover-grid.hidden {
+  display: none;
+}
+
+.puzzle-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #e8e4da;
+  cursor: pointer;
+}
+
+.puzzle-load-error {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  padding: 30px;
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.65;
+}

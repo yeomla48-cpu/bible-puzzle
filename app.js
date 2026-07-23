@@ -148,6 +148,9 @@ let unsubscribePhotos = null;
 let unsubscribeSettings = null;
 let selectedPhotoFile = null;
 let selectedPhotoObjectUrl = "";
+let puzzleRankByPosition = new Map();
+let puzzleCanvasColumns = 41;
+let puzzleCanvasRows = 29;
 
 function hasFirebaseConfig() {
   return Boolean(
@@ -406,68 +409,92 @@ function renderPhotoPuzzle(totalChaptersRead) {
 
   if (!hasPhoto) {
     elements.activePhotoTitle.textContent = "등록된 퍼즐 사진이 없습니다";
-    elements.activePhotoImage.removeAttribute("src");
     elements.photoCoverGrid.replaceChildren();
-    elements.photoCoverGrid.style.removeProperty("--puzzle-image");
+    puzzleRankByPosition = new Map();
     return;
   }
 
   elements.activePhotoTitle.textContent = activePhoto.title;
-  elements.activePhotoImage.src = activePhoto.downloadURL;
-  elements.photoCoverGrid.style.setProperty(
-    "--puzzle-image",
-    `url("${activePhoto.downloadURL.replaceAll('"', '\"')}")`
-  );
 
-  const puzzleImageProbe = new Image();
-  puzzleImageProbe.onload = () => {
-    if (puzzleImageProbe.naturalWidth && puzzleImageProbe.naturalHeight) {
-      elements.photoCoverGrid.style.aspectRatio =
-        `${puzzleImageProbe.naturalWidth} / ${puzzleImageProbe.naturalHeight}`;
-    }
-  };
-  puzzleImageProbe.src = activePhoto.downloadURL;
-
-  const chapterDetails = buildChapterDetails();
   const openCount = Math.min(totalChaptersRead, TOTAL_PUZZLE_PIECES);
-  const detailByPosition = new Map();
+  puzzleRankByPosition = new Map();
 
   for (let rank = 0; rank < openCount; rank += 1) {
-    detailByPosition.set(PUZZLE_ORDER[rank], {
-      rank,
-      detail: chapterDetails[rank] || null
-    });
+    puzzleRankByPosition.set(PUZZLE_ORDER[rank], rank);
   }
 
-  const columns = 41;
-  const rows = 29;
-  const fragment = document.createDocumentFragment();
+  const canvas = document.createElement("canvas");
+  canvas.className = "puzzle-canvas";
+  canvas.setAttribute("aria-label", `공동 퍼즐, ${openCount}조각 공개됨`);
+  elements.photoCoverGrid.replaceChildren(canvas);
 
-  for (let position = 0; position < TOTAL_PUZZLE_PIECES; position += 1) {
-    const pieceData = detailByPosition.get(position);
-    const column = position % columns;
-    const row = Math.floor(position / columns);
-
-    const cell = document.createElement("button");
-    cell.type = "button";
-    cell.className = `photo-cover-cell${pieceData ? " open" : ""}`;
-    cell.style.setProperty("--piece-x", String(column));
-    cell.style.setProperty("--piece-y", String(row));
-    cell.setAttribute(
-      "aria-label",
-      pieceData ? `열린 퍼즐 조각 ${pieceData.rank + 1}` : `잠긴 퍼즐 조각 ${position + 1}`
+  const image = new Image();
+  image.onload = () => {
+    const displayWidth = Math.max(820, image.naturalWidth);
+    const displayHeight = Math.round(
+      displayWidth * image.naturalHeight / image.naturalWidth
     );
 
-    if (pieceData) {
-      cell.dataset.pieceRank = String(pieceData.rank);
-    } else {
-      cell.disabled = true;
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
+    canvas.style.aspectRatio = `${image.naturalWidth} / ${image.naturalHeight}`;
+
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#e8e4da";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const tileWidth = canvas.width / puzzleCanvasColumns;
+    const tileHeight = canvas.height / puzzleCanvasRows;
+    const sourceTileWidth = image.naturalWidth / puzzleCanvasColumns;
+    const sourceTileHeight = image.naturalHeight / puzzleCanvasRows;
+
+    for (const [position] of puzzleRankByPosition) {
+      const column = position % puzzleCanvasColumns;
+      const row = Math.floor(position / puzzleCanvasColumns);
+
+      context.drawImage(
+        image,
+        column * sourceTileWidth,
+        row * sourceTileHeight,
+        sourceTileWidth,
+        sourceTileHeight,
+        column * tileWidth,
+        row * tileHeight,
+        tileWidth + 0.6,
+        tileHeight + 0.6
+      );
     }
 
-    fragment.appendChild(cell);
-  }
+    context.strokeStyle = "rgba(255,255,255,0.42)";
+    context.lineWidth = 0.7;
 
-  elements.photoCoverGrid.replaceChildren(fragment);
+    for (let column = 0; column <= puzzleCanvasColumns; column += 1) {
+      const x = column * tileWidth;
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x, canvas.height);
+      context.stroke();
+    }
+
+    for (let row = 0; row <= puzzleCanvasRows; row += 1) {
+      const y = row * tileHeight;
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(canvas.width, y);
+      context.stroke();
+    }
+  };
+
+  image.onerror = () => {
+    elements.photoCoverGrid.innerHTML = `
+      <div class="puzzle-load-error">
+        퍼즐 사진을 불러오지 못했습니다.<br>
+        GitHub Pages에서 사진 파일 주소를 확인해 주세요.
+      </div>
+    `;
+  };
+
+  image.src = activePhoto.downloadURL;
 }
 
 function openPieceModal(rank) {
@@ -922,9 +949,26 @@ elements.clearRecordsButton.addEventListener("click", async () => {
 });
 
 elements.photoCoverGrid.addEventListener("click", (event) => {
-  const piece = event.target.closest("[data-piece-rank]");
-  if (!piece) return;
-  openPieceModal(Number(piece.dataset.pieceRank));
+  const canvas = event.target.closest(".puzzle-canvas");
+  if (!canvas) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const column = Math.min(
+    puzzleCanvasColumns - 1,
+    Math.max(0, Math.floor(x / (rect.width / puzzleCanvasColumns)))
+  );
+  const row = Math.min(
+    puzzleCanvasRows - 1,
+    Math.max(0, Math.floor(y / (rect.height / puzzleCanvasRows)))
+  );
+  const position = row * puzzleCanvasColumns + column;
+  const rank = puzzleRankByPosition.get(position);
+
+  if (rank !== undefined) {
+    openPieceModal(rank);
+  }
 });
 
 elements.pieceCloseButton.addEventListener("click", closePieceModal);
