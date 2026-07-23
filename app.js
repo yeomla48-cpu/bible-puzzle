@@ -419,6 +419,15 @@ function renderPhotoPuzzle(totalChaptersRead) {
     `url("${activePhoto.downloadURL.replaceAll('"', '\"')}")`
   );
 
+  const puzzleImageProbe = new Image();
+  puzzleImageProbe.onload = () => {
+    if (puzzleImageProbe.naturalWidth && puzzleImageProbe.naturalHeight) {
+      elements.photoCoverGrid.style.aspectRatio =
+        `${puzzleImageProbe.naturalWidth} / ${puzzleImageProbe.naturalHeight}`;
+    }
+  };
+  puzzleImageProbe.src = activePhoto.downloadURL;
+
   const chapterDetails = buildChapterDetails();
   const openCount = Math.min(totalChaptersRead, TOTAL_PUZZLE_PIECES);
   const detailByPosition = new Map();
@@ -430,8 +439,8 @@ function renderPhotoPuzzle(totalChaptersRead) {
     });
   }
 
-  const columns = 29;
-  const rows = 41;
+  const columns = 41;
+  const rows = 29;
   const fragment = document.createDocumentFragment();
 
   for (let position = 0; position < TOTAL_PUZZLE_PIECES; position += 1) {

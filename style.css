@@ -1069,3 +1069,27 @@ textarea:disabled {
     padding: 0.5px;
   }
 }
+
+
+/* v3.1: 숨긴 원본 이미지 없이도 퍼즐판 높이가 유지되도록 수정 */
+#photoPuzzle.photo-puzzle {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#photoCoverGrid.photo-cover-grid {
+  --puzzle-columns: 41;
+  --puzzle-rows: 29;
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 41 / 29;
+  grid-template-columns: repeat(var(--puzzle-columns), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--puzzle-rows), minmax(0, 1fr));
+}
+
+#photoCoverGrid.photo-cover-grid.hidden {
+  display: none;
+}
