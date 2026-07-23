@@ -7,5 +7,5 @@ export const firebaseConfig = {
   appId: "1:89288167033:web:74cda30645594653878ea8"
 };
 
-// 관리자 이메일
+// Firebase Authentication에 등록한 관리자 이메일
 export const ADMIN_EMAIL = "bk4623731@gmail.com";

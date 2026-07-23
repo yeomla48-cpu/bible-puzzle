@@ -108,7 +108,13 @@ const elements = {
   adminLogoutButton: document.querySelector("#adminLogoutButton"),
   photoUploadForm: document.querySelector("#photoUploadForm"),
   photoTitle: document.querySelector("#photoTitle"),
-  photoUrl: document.querySelector("#photoUrl"),
+  photoFile: document.querySelector("#photoFile"),
+  photoPreviewBox: document.querySelector("#photoPreviewBox"),
+  photoPreviewImage: document.querySelector("#photoPreviewImage"),
+  photoFileName: document.querySelector("#photoFileName"),
+  photoFileInfo: document.querySelector("#photoFileInfo"),
+  photoAutoPath: document.querySelector("#photoAutoPath"),
+  photoRegisterButton: document.querySelector("#photoRegisterButton"),
   photoUploadError: document.querySelector("#photoUploadError"),
   photoCountBadge: document.querySelector("#photoCountBadge"),
   emptyPhotoList: document.querySelector("#emptyPhotoList"),
@@ -140,6 +146,8 @@ let activePhotoId = "";
 let unsubscribeRecords = null;
 let unsubscribePhotos = null;
 let unsubscribeSettings = null;
+let selectedPhotoFile = null;
+let selectedPhotoObjectUrl = "";
 
 function hasFirebaseConfig() {
   return Boolean(
@@ -686,6 +694,83 @@ elements.adminLogoutButton.addEventListener("click", async () => {
   showToast("관리자에서 로그아웃했습니다.");
 });
 
+
+function formatFileSize(size) {
+  if (size < 1024) return `${size}B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)}KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+function buildPuzzlePhotoUrl(fileName) {
+  return `./puzzles/${encodeURIComponent(fileName)}`;
+}
+
+function clearSelectedPhoto() {
+  if (selectedPhotoObjectUrl) {
+    URL.revokeObjectURL(selectedPhotoObjectUrl);
+  }
+
+  selectedPhotoFile = null;
+  selectedPhotoObjectUrl = "";
+  elements.photoPreviewImage.removeAttribute("src");
+  elements.photoPreviewBox.classList.add("hidden");
+  elements.photoAutoPath.textContent = "사진을 선택하면 자동으로 만들어집니다.";
+  elements.photoRegisterButton.disabled = true;
+}
+
+function checkImageExists(imageUrl) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    const separator = imageUrl.includes("?") ? "&" : "?";
+    image.onload = () => resolve(true);
+    image.onerror = () => resolve(false);
+    image.src = `${imageUrl}${separator}check=${Date.now()}`;
+  });
+}
+
+elements.photoFile.addEventListener("change", () => {
+  elements.photoUploadError.textContent = "";
+  const file = elements.photoFile.files?.[0];
+
+  if (!file) {
+    clearSelectedPhoto();
+    return;
+  }
+
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    elements.photoUploadError.textContent = "JPG, PNG, WEBP 사진만 선택할 수 있습니다.";
+    elements.photoFile.value = "";
+    clearSelectedPhoto();
+    return;
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    elements.photoUploadError.textContent = "사진 크기는 10MB 이하로 선택해 주세요.";
+    elements.photoFile.value = "";
+    clearSelectedPhoto();
+    return;
+  }
+
+  if (selectedPhotoObjectUrl) {
+    URL.revokeObjectURL(selectedPhotoObjectUrl);
+  }
+
+  selectedPhotoFile = file;
+  selectedPhotoObjectUrl = URL.createObjectURL(file);
+
+  elements.photoPreviewImage.src = selectedPhotoObjectUrl;
+  elements.photoFileName.textContent = file.name;
+  elements.photoFileInfo.textContent =
+    `${formatFileSize(file.size)} · ${file.type.replace("image/", "").toUpperCase()}`;
+  elements.photoPreviewBox.classList.remove("hidden");
+  elements.photoAutoPath.textContent = buildPuzzlePhotoUrl(file.name);
+  elements.photoRegisterButton.disabled = false;
+
+  if (!elements.photoTitle.value.trim()) {
+    elements.photoTitle.value = file.name.replace(/\.[^.]+$/, "");
+  }
+});
+
 elements.photoUploadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -695,28 +780,32 @@ elements.photoUploadForm.addEventListener("submit", async (event) => {
   }
 
   const title = elements.photoTitle.value.trim();
-  const downloadURL = elements.photoUrl.value.trim();
+  const file = selectedPhotoFile;
 
-  if (!title || !downloadURL) {
-    elements.photoUploadError.textContent = "사진 제목과 이미지 주소를 모두 입력해 주세요.";
+  if (!title || !file) {
+    elements.photoUploadError.textContent = "퍼즐 이름과 사진 파일을 선택해 주세요.";
     return;
   }
 
-  try {
-    new URL(downloadURL);
-  } catch {
-    elements.photoUploadError.textContent = "올바른 이미지 주소를 입력해 주세요.";
-    return;
-  }
-
-  const submitButton = elements.photoUploadForm.querySelector('button[type="submit"]');
+  const downloadURL = buildPuzzlePhotoUrl(file.name);
+  const submitButton = elements.photoRegisterButton;
   submitButton.disabled = true;
+  submitButton.textContent = "GitHub 사진 확인 중...";
   elements.photoUploadError.textContent = "";
 
   try {
+    const exists = await checkImageExists(downloadURL);
+
+    if (!exists) {
+      elements.photoUploadError.textContent =
+        `GitHub puzzles 폴더에서 "${file.name}" 파일을 찾지 못했습니다. 같은 이름의 파일을 먼저 GitHub에 올려주세요.`;
+      return;
+    }
+
     const photoDocument = await addDoc(collection(db, "photos"), {
       title,
       downloadURL,
+      fileName: file.name,
       createdAt: serverTimestamp(),
       createdAtMs: Date.now(),
       uploadedBy: currentUser.uid
@@ -730,11 +819,14 @@ elements.photoUploadForm.addEventListener("submit", async (event) => {
     }
 
     elements.photoUploadForm.reset();
-    showToast("퍼즐 사진 주소를 등록했습니다.");
+    elements.photoTitle.value = "";
+    clearSelectedPhoto();
+    showToast("퍼즐 사진을 등록했습니다.");
   } catch (error) {
     elements.photoUploadError.textContent = friendlyFirebaseError(error);
   } finally {
-    submitButton.disabled = false;
+    submitButton.textContent = "퍼즐 사진 등록하기";
+    submitButton.disabled = !selectedPhotoFile;
   }
 });
 

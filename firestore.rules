@@ -2,13 +2,14 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
     function signedIn() {
       return request.auth != null;
     }
 
     function isAdmin() {
       return signedIn()
-        && request.auth.token.email == "admin@example.com";
+        && request.auth.token.email == "bk4623731@gmail.com";
     }
 
     match /records/{recordId} {
@@ -17,6 +18,8 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() >= 2
+        && request.resource.data.nickname.size() <= 12
         && request.resource.data.book is string
         && request.resource.data.startChapter is int
         && request.resource.data.endChapter is int
@@ -37,6 +40,10 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read: if signedIn();
       allow create, update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
