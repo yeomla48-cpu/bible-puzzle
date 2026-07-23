@@ -988,3 +988,84 @@ textarea:disabled {
     min-height: 210px;
   }
 }
+
+
+/* v3: 원본 사진을 숨기고 열린 조각만 표시하는 퍼즐 */
+.photo-puzzle-stage {
+  position: relative;
+  overflow: hidden;
+  background: #eeeae0;
+}
+
+#activePhotoImage {
+  display: none !important;
+}
+
+.photo-cover-grid {
+  --puzzle-columns: 29;
+  --puzzle-rows: 41;
+  display: grid;
+  grid-template-columns: repeat(var(--puzzle-columns), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--puzzle-rows), minmax(0, 1fr));
+  width: 100%;
+  aspect-ratio: 29 / 41;
+  gap: 1px;
+  padding: 1px;
+  background:
+    linear-gradient(rgba(255,255,255,0.35), rgba(255,255,255,0.35)),
+    #e8e4da;
+}
+
+.photo-cover-cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #e8e4da;
+  cursor: default;
+  overflow: hidden;
+}
+
+.photo-cover-cell.open {
+  background-image: var(--puzzle-image);
+  background-repeat: no-repeat;
+  background-size:
+    calc(var(--puzzle-columns) * 100%)
+    calc(var(--puzzle-rows) * 100%);
+  background-position:
+    calc(
+      var(--piece-x) * 100% /
+      (var(--puzzle-columns) - 1)
+    )
+    calc(
+      var(--piece-y) * 100% /
+      (var(--puzzle-rows) - 1)
+    );
+  cursor: pointer;
+  animation: puzzle-piece-reveal 0.5s ease both;
+}
+
+.photo-cover-cell.open:hover {
+  filter: brightness(1.06);
+  z-index: 2;
+}
+
+@keyframes puzzle-piece-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 720px) {
+  .photo-cover-grid {
+    gap: 0.5px;
+    padding: 0.5px;
+  }
+}

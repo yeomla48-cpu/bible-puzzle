@@ -400,7 +400,7 @@ function renderPhotoPuzzle(totalChaptersRead) {
   const activePhoto = getActivePhoto();
   const hasPhoto = Boolean(activePhoto?.downloadURL);
 
-  elements.activePhotoImage.classList.toggle("hidden", !hasPhoto);
+  elements.activePhotoImage.classList.add("hidden");
   elements.photoCoverGrid.classList.toggle("hidden", !hasPhoto);
   elements.noPhotoState.classList.toggle("hidden", hasPhoto);
 
@@ -408,11 +408,16 @@ function renderPhotoPuzzle(totalChaptersRead) {
     elements.activePhotoTitle.textContent = "등록된 퍼즐 사진이 없습니다";
     elements.activePhotoImage.removeAttribute("src");
     elements.photoCoverGrid.replaceChildren();
+    elements.photoCoverGrid.style.removeProperty("--puzzle-image");
     return;
   }
 
   elements.activePhotoTitle.textContent = activePhoto.title;
   elements.activePhotoImage.src = activePhoto.downloadURL;
+  elements.photoCoverGrid.style.setProperty(
+    "--puzzle-image",
+    `url("${activePhoto.downloadURL.replaceAll('"', '\"')}")`
+  );
 
   const chapterDetails = buildChapterDetails();
   const openCount = Math.min(totalChaptersRead, TOTAL_PUZZLE_PIECES);
@@ -425,12 +430,20 @@ function renderPhotoPuzzle(totalChaptersRead) {
     });
   }
 
+  const columns = 29;
+  const rows = 41;
   const fragment = document.createDocumentFragment();
+
   for (let position = 0; position < TOTAL_PUZZLE_PIECES; position += 1) {
     const pieceData = detailByPosition.get(position);
+    const column = position % columns;
+    const row = Math.floor(position / columns);
+
     const cell = document.createElement("button");
     cell.type = "button";
     cell.className = `photo-cover-cell${pieceData ? " open" : ""}`;
+    cell.style.setProperty("--piece-x", String(column));
+    cell.style.setProperty("--piece-y", String(row));
     cell.setAttribute(
       "aria-label",
       pieceData ? `열린 퍼즐 조각 ${pieceData.rank + 1}` : `잠긴 퍼즐 조각 ${position + 1}`
@@ -441,8 +454,10 @@ function renderPhotoPuzzle(totalChaptersRead) {
     } else {
       cell.disabled = true;
     }
+
     fragment.appendChild(cell);
   }
+
   elements.photoCoverGrid.replaceChildren(fragment);
 }
 
