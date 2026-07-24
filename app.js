@@ -60,7 +60,42 @@ function renderPuzzle(){const p=activePuzzle(),rs=activeRecords().sort((a,b)=>(a
 }
 function renderStats(){const ars=activeRecords(),today=dateKey(),mine=ars.filter(r=>normalizeNickname(r.nickname)===normalizeNickname(nickname));el.todayParticipants.textContent=`${new Set(ars.filter(r=>r.date===today).map(r=>normalizeNickname(r.nickname))).size}명`;el.myPieces.textContent=`${mine.length}조각`;const done=ars.some(r=>r.date===today&&normalizeNickname(r.nickname)===normalizeNickname(nickname));el.todayAuthBadge.textContent=done?"오늘 인증 완료":"인증 가능";el.todayAuthBadge.classList.toggle("done",done);setReadingDisabled(!ready||!activePuzzle()||done)}
 function renderLeaderboard(){const counts=new Map();for(const r of activeRecords())counts.set(r.nickname,(counts.get(r.nickname)||0)+1);const sorted=[...counts].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"ko"));el.emptyLeaderboard.classList.toggle("hidden",sorted.length>0);el.leaderboard.innerHTML=sorted.map(([name,count],i)=>`<div class="leader-row"><span class="leader-rank">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><span class="leader-name">${esc(name)}</span><span class="leader-count">${count}조각</span></div>`).join("")}
-function renderRecords(){const rs=activeRecords().sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0)).slice(0,12);el.emptyRecords.classList.toggle("hidden",rs.length>0);el.recordList.innerHTML=rs.map(r=>`<article class="record-card"><div class="record-top"><div><span class="record-name">${esc(r.nickname)}</span><p class="record-range">${esc(r.book)} ${r.startChapter}${r.startChapter===r.endChapter?"":`~${r.endChapter}`}장</p></div><span class="record-meta">${esc(formatDate(r.date))}</span></div>${r.reflection?`<p class="record-text">${esc(r.reflection)}</p>`:""}</article>`).join("")}
+function renderRecords(){
+  const rs=activeRecords()
+    .sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0))
+    .slice(0,12);
+
+  el.emptyRecords.classList.toggle("hidden",rs.length>0);
+
+  el.recordList.innerHTML=rs.map(r=>`
+    <article class="record-card">
+      <div class="record-top">
+        <div>
+          <span class="record-name">${esc(r.nickname)}</span>
+          <p class="record-range">
+            ${esc(r.book)} ${r.startChapter}${r.startChapter===r.endChapter?"":`~${r.endChapter}`}장
+          </p>
+        </div>
+
+        <div class="record-side">
+          <span class="record-meta">${esc(formatDate(r.date))}</span>
+          ${isAdmin?`
+            <button
+              type="button"
+              class="record-delete-button"
+              data-delete-record="${esc(r.id)}"
+              aria-label="${esc(r.nickname)}님의 인증 기록 삭제"
+            >
+              인증 삭제
+            </button>
+          `:""}
+        </div>
+      </div>
+
+      ${r.reflection?`<p class="record-text">${esc(r.reflection)}</p>`:""}
+    </article>
+  `).join("");
+}
 function createArchivedPuzzleGrid(puzzle, puzzleRecords) {
   const total = Math.max(1, Number(puzzle.totalPieces) || 1);
   const opened = Math.min(puzzleRecords.length, total);
@@ -376,6 +411,30 @@ const buildUrl=n=>`./puzzles/${encodeURIComponent(n)}`;const sizeText=s=>s<10485
 el.photoFile.addEventListener("change",()=>{const f=el.photoFile.files?.[0];el.photoUploadError.textContent="";if(!f)return clearFile();if(!["image/jpeg","image/png","image/webp"].includes(f.type)||f.size>10*1024*1024){el.photoUploadError.textContent="JPG, PNG, WEBP 10MB 이하 파일만 가능합니다.";el.photoFile.value="";return clearFile()}if(objectUrl)URL.revokeObjectURL(objectUrl);selectedFile=f;objectUrl=URL.createObjectURL(f);el.photoPreviewImage.src=objectUrl;el.photoFileName.textContent=f.name;el.photoFileInfo.textContent=sizeText(f.size);el.photoPreviewBox.classList.remove("hidden");el.photoAutoPath.textContent=buildUrl(f.name);el.photoRegisterButton.disabled=false;if(!el.photoTitle.value.trim())el.photoTitle.value=f.name.replace(/\.[^.]+$/,"")});
 function imageExists(url){return new Promise(res=>{const i=new Image();i.onload=()=>res(true);i.onerror=()=>res(false);i.src=`${url}?v=${Date.now()}`})}
 el.photoUploadForm.addEventListener("submit",async e=>{e.preventDefault();if(!isAdmin)return;const title=el.photoTitle.value.trim(),total=+el.photoPieceCount.value;if(!selectedFile||!title||!Number.isInteger(total)||total<1){el.photoUploadError.textContent="사진, 제목, 조각 수를 확인해 주세요.";return}const url=buildUrl(selectedFile.name),btn=el.photoRegisterButton;btn.disabled=true;btn.textContent="사진 확인 중...";try{if(!await imageExists(url)){el.photoUploadError.textContent=`GitHub puzzles 폴더에서 ${selectedFile.name} 파일을 찾지 못했습니다.`;return}await addDoc(collection(db,"photos"),{title,downloadURL:url,fileName:selectedFile.name,totalPieces:total,startDate:el.photoStartDate.value||"",endDate:el.photoEndDate.value||"",status:"waiting",createdAt:serverTimestamp(),createdAtMs:Date.now(),uploadedBy:currentUser.uid});el.photoUploadForm.reset();el.photoPieceCount.value=620;clearFile();showToast("대기 퍼즐로 등록했습니다.")}catch(err){el.photoUploadError.textContent=friendly(err)}finally{btn.textContent="대기 퍼즐로 등록하기";btn.disabled=!selectedFile}});
+el.recordList.addEventListener("click",async event=>{
+  const deleteButton=event.target.closest("[data-delete-record]");
+  if(!deleteButton||!isAdmin)return;
+
+  const recordId=deleteButton.dataset.deleteRecord;
+  const record=records.find(r=>r.id===recordId);
+  if(!record)return;
+
+  const confirmed=confirm(
+    `${record.nickname}님의 ${formatDate(record.date)} 인증 기록을 삭제할까요?\n삭제하면 해당 사용자는 오늘 다시 인증할 수 있습니다.`
+  );
+  if(!confirmed)return;
+
+  deleteButton.disabled=true;
+
+  try{
+    await deleteDoc(doc(db,"records",recordId));
+    showToast("인증 기록을 삭제했습니다. 해당 날짜에 다시 인증할 수 있습니다.");
+  }catch(error){
+    showToast(friendly(error));
+    deleteButton.disabled=false;
+  }
+});
+
 el.adminPhotoList.addEventListener("click",async e=>{if(!isAdmin)return;const activate=e.target.closest("[data-activate]"),edit=e.target.closest("[data-edit]"),complete=e.target.closest("[data-complete]"),del=e.target.closest("[data-delete]");try{if(activate){const id=activate.dataset.activate,old=activePuzzle();const batch=writeBatch(db);if(old&&old.id!==id)batch.update(doc(db,"photos",old.id),{status:"completed",completedAt:serverTimestamp()});batch.update(doc(db,"photos",id),{status:"active",activatedAt:serverTimestamp()});batch.set(doc(db,"settings","main"),{activePhotoId:id,updatedAt:serverTimestamp()},{merge:true});await batch.commit();showToast("새 퍼즐을 시작했습니다.")}if(edit){const p=puzzles.find(x=>x.id===edit.dataset.edit),count=records.filter(r=>r.puzzleId===p.id).length;const value=prompt(`현재 ${count}조각을 획득했습니다. 새 총 조각 수를 입력하세요.`,p.totalPieces);if(value===null)return;const total=Number(value);if(!Number.isInteger(total)||total<1||total>5000)return alert("1~5000 사이의 정수를 입력해 주세요.");if(total<count&&!confirm(`현재 획득 조각(${count})보다 작아 즉시 완성됩니다. 계속할까요?`))return;await updateDoc(doc(db,"photos",p.id),{totalPieces:total,updatedAt:serverTimestamp()});showToast("총 조각 수가 즉시 반영되었습니다.")}if(complete){const id=complete.dataset.complete;if(!confirm("현재 퍼즐을 완료하고 보관할까요?"))return;await updateDoc(doc(db,"photos",id),{status:"completed",completedAt:serverTimestamp()});await setDoc(doc(db,"settings","main"),{activePhotoId:"",updatedAt:serverTimestamp()},{merge:true});showToast("퍼즐을 보관함으로 이동했습니다.")}if(del){const id=del.dataset.delete,p=puzzles.find(x=>x.id===id);if(!confirm(`\"${p.title}\" 퍼즐을 삭제할까요? 기록은 남습니다.`))return;await deleteDoc(doc(db,"photos",id));if(activePuzzleId===id)await setDoc(doc(db,"settings","main"),{activePhotoId:""},{merge:true});showToast("퍼즐을 삭제했습니다.")}}catch(err){showToast(friendly(err))}});
 el.photoCoverGrid.addEventListener("click",e=>{const t=e.target.closest("[data-record-rank]");if(!t)return;const rs=activeRecords().sort((a,b)=>(a.createdAtMs||0)-(b.createdAtMs||0)),r=rs[+t.dataset.recordRank];if(!r)return;el.pieceNumberBadge.textContent=`#${+t.dataset.recordRank+1}`;el.pieceNickname.textContent=r.nickname;el.piecePassage.textContent=`${r.book} ${r.startChapter}${r.startChapter===r.endChapter?"":`~${r.endChapter}`}장`;el.pieceDate.textContent=formatDate(r.date);el.pieceReflection.textContent=r.reflection||"";el.pieceReflectionRow.classList.toggle("hidden",!r.reflection);el.pieceModal.classList.remove("hidden")});const closePiece=()=>el.pieceModal.classList.add("hidden");el.pieceCloseButton.addEventListener("click",closePiece);el.pieceModal.querySelector("[data-close-piece]").addEventListener("click",closePiece);
 
