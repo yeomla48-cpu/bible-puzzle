@@ -1353,3 +1353,148 @@ textarea:disabled {
     font-size: 0.72rem;
   }
 }
+
+
+/* =========================================================
+   v5: 관리자 인증 기록 관리
+   ========================================================= */
+
+.admin-record-manager {
+  margin-top: 6px;
+}
+
+.admin-record-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-record-heading h3 {
+  margin: 4px 0 0;
+}
+
+.admin-record-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, 0.45fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 18px;
+}
+
+.admin-record-filters label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.admin-record-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--surface-strong);
+}
+
+.admin-record-main {
+  min-width: 0;
+}
+
+.admin-record-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-record-name-row strong {
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
+}
+
+.admin-record-name-row span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.admin-record-main p {
+  margin: 6px 0 0;
+  color: var(--primary-dark);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.admin-record-main small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.admin-record-main blockquote {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-left: 3px solid var(--primary-soft);
+  border-radius: 0 9px 9px 0;
+  background: #faf8f2;
+  color: #506057;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.admin-record-delete {
+  min-height: 38px;
+  padding: 0 13px;
+  background: #f6e2e2;
+  color: var(--danger);
+  font-size: 0.78rem;
+}
+
+.admin-record-delete:hover {
+  background: #efd0d0;
+  color: #843636;
+}
+
+@media (max-width: 720px) {
+  .admin-record-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-record-filters button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-record-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-record-filters button {
+    grid-column: auto;
+  }
+
+  .admin-record-item {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-record-delete {
+    width: 100%;
+  }
+
+  .admin-record-name-row {
+    align-items: flex-start;
+  }
+}

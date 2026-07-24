@@ -76,26 +76,13 @@ function renderRecords(){
             ${esc(r.book)} ${r.startChapter}${r.startChapter===r.endChapter?"":`~${r.endChapter}`}장
           </p>
         </div>
-
-        <div class="record-side">
-          <span class="record-meta">${esc(formatDate(r.date))}</span>
-          ${isAdmin?`
-            <button
-              type="button"
-              class="record-delete-button"
-              data-delete-record="${esc(r.id)}"
-              aria-label="${esc(r.nickname)}님의 인증 기록 삭제"
-            >
-              인증 삭제
-            </button>
-          `:""}
-        </div>
+        <span class="record-meta">${esc(formatDate(r.date))}</span>
       </div>
-
       ${r.reflection?`<p class="record-text">${esc(r.reflection)}</p>`:""}
     </article>
   `).join("");
 }
+
 function createArchivedPuzzleGrid(puzzle, puzzleRecords) {
   const total = Math.max(1, Number(puzzle.totalPieces) || 1);
   const opened = Math.min(puzzleRecords.length, total);
@@ -225,7 +212,134 @@ function renderUpcoming() {
   }).join("");
 }
 
-function renderAdmin(){el.photoCountBadge.textContent=`${puzzles.length}개`;el.emptyPhotoList.classList.toggle("hidden",puzzles.length>0);el.adminPhotoList.innerHTML=puzzles.sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0)).map(p=>{const count=records.filter(r=>r.puzzleId===p.id).length;const status=p.status||"waiting";return`<article class="admin-photo-item"><img src="${esc(p.downloadURL)}" alt=""><div class="admin-photo-info"><h4>${esc(p.title)}</h4><p><span class="status-${status}">${status==="active"?"진행 중":status==="completed"?"완료":"대기"}</span> · ${count} / ${p.totalPieces||1}조각</p><p>${p.startDate||p.endDate?`${p.startDate||"미정"} ~ ${p.endDate||"미정"}`:"기간 미설정"}</p></div><div class="admin-photo-actions">${status!=="active"?`<button data-activate="${p.id}">진행하기</button>`:""}<button class="secondary-button" data-edit="${p.id}">조각수 수정</button>${status==="active"?`<button class="secondary-button" data-complete="${p.id}">완료/보관</button>`:""}<button class="danger-button" data-delete="${p.id}">삭제</button></div></article>`}).join("")}
+
+function ensureAdminRecordManager(){
+  if(!el.adminDashboardSection || $("#adminRecordManager")) return;
+
+  const section=document.createElement("section");
+  section.id="adminRecordManager";
+  section.className="admin-section admin-record-manager";
+  section.innerHTML=`
+    <div class="admin-divider"></div>
+    <div class="admin-record-heading">
+      <div>
+        <p class="eyebrow">인증 관리</p>
+        <h3>인증 기록 관리</h3>
+        <p class="muted-line">잘못 등록된 인증을 한 건씩 삭제할 수 있습니다.</p>
+      </div>
+      <span id="adminRecordCountBadge" class="status-badge">0개</span>
+    </div>
+
+    <div class="admin-record-filters">
+      <label>
+        닉네임 검색
+        <input id="adminRecordSearch" type="search" placeholder="닉네임을 입력하세요">
+      </label>
+      <label>
+        날짜
+        <input id="adminRecordDate" type="date">
+      </label>
+      <button id="adminRecordReset" type="button" class="secondary-button">검색 초기화</button>
+    </div>
+
+    <div id="adminRecordEmpty" class="empty-state small-empty hidden">
+      <span>📋</span>
+      <p>조건에 맞는 인증 기록이 없습니다.</p>
+    </div>
+
+    <div id="adminRecordList" class="admin-record-list"></div>
+  `;
+
+  el.adminDashboardSection.appendChild(section);
+
+  $("#adminRecordSearch").addEventListener("input",renderAdminRecords);
+  $("#adminRecordDate").addEventListener("change",renderAdminRecords);
+  $("#adminRecordReset").addEventListener("click",()=>{
+    $("#adminRecordSearch").value="";
+    $("#adminRecordDate").value="";
+    renderAdminRecords();
+  });
+
+  $("#adminRecordList").addEventListener("click",async event=>{
+    const button=event.target.closest("[data-admin-delete-record]");
+    if(!button || !isAdmin) return;
+
+    const recordId=button.dataset.adminDeleteRecord;
+    const record=records.find(item=>item.id===recordId);
+    if(!record) return;
+
+    const passage=`${record.book} ${record.startChapter}${record.startChapter===record.endChapter?"":`~${record.endChapter}`}장`;
+    const confirmed=confirm(
+      `${record.nickname}님의 인증을 삭제할까요?\n\n` +
+      `날짜: ${formatDate(record.date)}\n` +
+      `범위: ${passage}\n\n` +
+      `삭제하면 퍼즐 조각이 1개 회수되고, 해당 사용자는 그날 다시 인증할 수 있습니다.`
+    );
+    if(!confirmed) return;
+
+    button.disabled=true;
+    button.textContent="삭제 중...";
+
+    try{
+      await deleteDoc(doc(db,"records",recordId));
+      showToast("인증 기록을 삭제했습니다. 해당 날짜에 다시 인증할 수 있습니다.");
+    }catch(error){
+      showToast(friendly(error));
+      button.disabled=false;
+      button.textContent="삭제";
+    }
+  });
+}
+
+function renderAdminRecords(){
+  if(!isAdmin) return;
+  ensureAdminRecordManager();
+
+  const list=$("#adminRecordList");
+  const empty=$("#adminRecordEmpty");
+  const badge=$("#adminRecordCountBadge");
+  const search=normalizeNickname($("#adminRecordSearch")?.value||"");
+  const selectedDate=$("#adminRecordDate")?.value||"";
+
+  const filtered=records
+    .filter(record=>{
+      const matchesName=!search || normalizeNickname(record.nickname).includes(search);
+      const matchesDate=!selectedDate || record.date===selectedDate;
+      return matchesName && matchesDate;
+    })
+    .sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));
+
+  badge.textContent=`${filtered.length}개`;
+  empty.classList.toggle("hidden",filtered.length>0);
+
+  list.innerHTML=filtered.map(record=>{
+    const passage=`${esc(record.book)} ${record.startChapter}${record.startChapter===record.endChapter?"":`~${record.endChapter}`}장`;
+    const puzzle=puzzles.find(item=>item.id===record.puzzleId);
+
+    return `
+      <article class="admin-record-item">
+        <div class="admin-record-main">
+          <div class="admin-record-name-row">
+            <strong>${esc(record.nickname)}</strong>
+            <span>${esc(formatDate(record.date))}</span>
+          </div>
+          <p>${passage}</p>
+          <small>${puzzle?`퍼즐: ${esc(puzzle.title)}`:"연결된 퍼즐 정보 없음"}</small>
+          ${record.reflection?`<blockquote>${esc(record.reflection)}</blockquote>`:""}
+        </div>
+        <button
+          type="button"
+          class="admin-record-delete"
+          data-admin-delete-record="${esc(record.id)}"
+        >
+          삭제
+        </button>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderAdmin(){el.photoCountBadge.textContent=`${puzzles.length}개`;el.emptyPhotoList.classList.toggle("hidden",puzzles.length>0);el.adminPhotoList.innerHTML=puzzles.sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0)).map(p=>{const count=records.filter(r=>r.puzzleId===p.id).length;const status=p.status||"waiting";return`<article class="admin-photo-item"><img src="${esc(p.downloadURL)}" alt=""><div class="admin-photo-info"><h4>${esc(p.title)}</h4><p><span class="status-${status}">${status==="active"?"진행 중":status==="completed"?"완료":"대기"}</span> · ${count} / ${p.totalPieces||1}조각</p><p>${p.startDate||p.endDate?`${p.startDate||"미정"} ~ ${p.endDate||"미정"}`:"기간 미설정"}</p></div><div class="admin-photo-actions">${status!=="active"?`<button data-activate="${p.id}">진행하기</button>`:""}<button class="secondary-button" data-edit="${p.id}">조각수 수정</button>${status==="active"?`<button class="secondary-button" data-complete="${p.id}">완료/보관</button>`:""}<button class="danger-button" data-delete="${p.id}">삭제</button></div></article>`}).join("");ensureAdminRecordManager();renderAdminRecords()}
 function renderAll(){el.todayLabel.textContent=new Intl.DateTimeFormat("ko-KR",{month:"long",day:"numeric",weekday:"short"}).format(new Date());renderPuzzle();renderStats();renderLeaderboard();renderRecords();renderArchive();renderUpcoming();if(isAdmin)renderAdmin()}
 
 async function ensureAnonymous(){if(!auth.currentUser)await signInAnonymously(auth)}
@@ -411,29 +525,6 @@ const buildUrl=n=>`./puzzles/${encodeURIComponent(n)}`;const sizeText=s=>s<10485
 el.photoFile.addEventListener("change",()=>{const f=el.photoFile.files?.[0];el.photoUploadError.textContent="";if(!f)return clearFile();if(!["image/jpeg","image/png","image/webp"].includes(f.type)||f.size>10*1024*1024){el.photoUploadError.textContent="JPG, PNG, WEBP 10MB 이하 파일만 가능합니다.";el.photoFile.value="";return clearFile()}if(objectUrl)URL.revokeObjectURL(objectUrl);selectedFile=f;objectUrl=URL.createObjectURL(f);el.photoPreviewImage.src=objectUrl;el.photoFileName.textContent=f.name;el.photoFileInfo.textContent=sizeText(f.size);el.photoPreviewBox.classList.remove("hidden");el.photoAutoPath.textContent=buildUrl(f.name);el.photoRegisterButton.disabled=false;if(!el.photoTitle.value.trim())el.photoTitle.value=f.name.replace(/\.[^.]+$/,"")});
 function imageExists(url){return new Promise(res=>{const i=new Image();i.onload=()=>res(true);i.onerror=()=>res(false);i.src=`${url}?v=${Date.now()}`})}
 el.photoUploadForm.addEventListener("submit",async e=>{e.preventDefault();if(!isAdmin)return;const title=el.photoTitle.value.trim(),total=+el.photoPieceCount.value;if(!selectedFile||!title||!Number.isInteger(total)||total<1){el.photoUploadError.textContent="사진, 제목, 조각 수를 확인해 주세요.";return}const url=buildUrl(selectedFile.name),btn=el.photoRegisterButton;btn.disabled=true;btn.textContent="사진 확인 중...";try{if(!await imageExists(url)){el.photoUploadError.textContent=`GitHub puzzles 폴더에서 ${selectedFile.name} 파일을 찾지 못했습니다.`;return}await addDoc(collection(db,"photos"),{title,downloadURL:url,fileName:selectedFile.name,totalPieces:total,startDate:el.photoStartDate.value||"",endDate:el.photoEndDate.value||"",status:"waiting",createdAt:serverTimestamp(),createdAtMs:Date.now(),uploadedBy:currentUser.uid});el.photoUploadForm.reset();el.photoPieceCount.value=620;clearFile();showToast("대기 퍼즐로 등록했습니다.")}catch(err){el.photoUploadError.textContent=friendly(err)}finally{btn.textContent="대기 퍼즐로 등록하기";btn.disabled=!selectedFile}});
-el.recordList.addEventListener("click",async event=>{
-  const deleteButton=event.target.closest("[data-delete-record]");
-  if(!deleteButton||!isAdmin)return;
-
-  const recordId=deleteButton.dataset.deleteRecord;
-  const record=records.find(r=>r.id===recordId);
-  if(!record)return;
-
-  const confirmed=confirm(
-    `${record.nickname}님의 ${formatDate(record.date)} 인증 기록을 삭제할까요?\n삭제하면 해당 사용자는 오늘 다시 인증할 수 있습니다.`
-  );
-  if(!confirmed)return;
-
-  deleteButton.disabled=true;
-
-  try{
-    await deleteDoc(doc(db,"records",recordId));
-    showToast("인증 기록을 삭제했습니다. 해당 날짜에 다시 인증할 수 있습니다.");
-  }catch(error){
-    showToast(friendly(error));
-    deleteButton.disabled=false;
-  }
-});
 
 el.adminPhotoList.addEventListener("click",async e=>{if(!isAdmin)return;const activate=e.target.closest("[data-activate]"),edit=e.target.closest("[data-edit]"),complete=e.target.closest("[data-complete]"),del=e.target.closest("[data-delete]");try{if(activate){const id=activate.dataset.activate,old=activePuzzle();const batch=writeBatch(db);if(old&&old.id!==id)batch.update(doc(db,"photos",old.id),{status:"completed",completedAt:serverTimestamp()});batch.update(doc(db,"photos",id),{status:"active",activatedAt:serverTimestamp()});batch.set(doc(db,"settings","main"),{activePhotoId:id,updatedAt:serverTimestamp()},{merge:true});await batch.commit();showToast("새 퍼즐을 시작했습니다.")}if(edit){const p=puzzles.find(x=>x.id===edit.dataset.edit),count=records.filter(r=>r.puzzleId===p.id).length;const value=prompt(`현재 ${count}조각을 획득했습니다. 새 총 조각 수를 입력하세요.`,p.totalPieces);if(value===null)return;const total=Number(value);if(!Number.isInteger(total)||total<1||total>5000)return alert("1~5000 사이의 정수를 입력해 주세요.");if(total<count&&!confirm(`현재 획득 조각(${count})보다 작아 즉시 완성됩니다. 계속할까요?`))return;await updateDoc(doc(db,"photos",p.id),{totalPieces:total,updatedAt:serverTimestamp()});showToast("총 조각 수가 즉시 반영되었습니다.")}if(complete){const id=complete.dataset.complete;if(!confirm("현재 퍼즐을 완료하고 보관할까요?"))return;await updateDoc(doc(db,"photos",id),{status:"completed",completedAt:serverTimestamp()});await setDoc(doc(db,"settings","main"),{activePhotoId:"",updatedAt:serverTimestamp()},{merge:true});showToast("퍼즐을 보관함으로 이동했습니다.")}if(del){const id=del.dataset.delete,p=puzzles.find(x=>x.id===id);if(!confirm(`\"${p.title}\" 퍼즐을 삭제할까요? 기록은 남습니다.`))return;await deleteDoc(doc(db,"photos",id));if(activePuzzleId===id)await setDoc(doc(db,"settings","main"),{activePhotoId:""},{merge:true});showToast("퍼즐을 삭제했습니다.")}}catch(err){showToast(friendly(err))}});
 el.photoCoverGrid.addEventListener("click",e=>{const t=e.target.closest("[data-record-rank]");if(!t)return;const rs=activeRecords().sort((a,b)=>(a.createdAtMs||0)-(b.createdAtMs||0)),r=rs[+t.dataset.recordRank];if(!r)return;el.pieceNumberBadge.textContent=`#${+t.dataset.recordRank+1}`;el.pieceNickname.textContent=r.nickname;el.piecePassage.textContent=`${r.book} ${r.startChapter}${r.startChapter===r.endChapter?"":`~${r.endChapter}`}장`;el.pieceDate.textContent=formatDate(r.date);el.pieceReflection.textContent=r.reflection||"";el.pieceReflectionRow.classList.toggle("hidden",!r.reflection);el.pieceModal.classList.remove("hidden")});const closePiece=()=>el.pieceModal.classList.add("hidden");el.pieceCloseButton.addEventListener("click",closePiece);el.pieceModal.querySelector("[data-close-piece]").addEventListener("click",closePiece);
