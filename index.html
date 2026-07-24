@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="청년부 성경일독 공동 퍼즐 프로젝트" />
-  <title>말씀의 발자취 v4</title>
-  <link rel="stylesheet" href="./style.css?v=4" />
+<title>말씀의 발자취 v4-2</title>
+  <link rel="stylesheet" href="./style.css?v=4-2" />
 </head>
 <body>
   <header class="site-header">
@@ -76,10 +76,45 @@
         </section>
       </div>
 
-      <section class="card archive-card">
-        <div class="section-heading"><div><p class="eyebrow">퍼즐 앨범</p><h2>지난 퍼즐 보관함</h2></div></div>
-        <div id="emptyArchive" class="empty-state small-empty"><span>🖼️</span><p>완료되거나 보관된 퍼즐이 없습니다.</p></div><div id="archiveList" class="archive-list"></div>
-      </section>
+  <section class="card archive-card">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">퍼즐 앨범</p>
+      <h2>지난 퍼즐 보관함</h2>
+      <p class="muted-line">
+        퍼즐을 진행하면서 실제로 공개된 조각까지만 확인할 수 있습니다.
+      </p>
+    </div>
+  </div>
+
+  <div id="emptyArchive" class="empty-state small-empty">
+    <span>🖼️</span>
+    <p>완료되거나 보관된 퍼즐이 없습니다.</p>
+  </div>
+
+  <div id="archiveList" class="archive-list"></div>
+</section>
+
+<section class="card upcoming-card">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">다음 말씀 여정</p>
+      <h2>진행 예정 퍼즐</h2>
+      <p class="muted-line">
+        아직 시작하지 않은 퍼즐의 사진은 공개되지 않습니다.
+      </p>
+    </div>
+
+    <span id="upcomingCountBadge" class="piece-counter">0개</span>
+  </div>
+
+  <div id="emptyUpcoming" class="empty-state small-empty">
+    <span>🔒</span>
+    <p>현재 등록된 진행 예정 퍼즐이 없습니다.</p>
+  </div>
+
+  <div id="upcomingList" class="upcoming-list"></div>
+</section>
     </section>
   </main>
 
@@ -115,6 +150,6 @@
 
   <div id="pieceModal" class="modal hidden"><div class="modal-backdrop" data-close-piece></div><section class="modal-panel piece-modal-panel"><div class="modal-header"><div><p class="eyebrow">말씀 퍼즐 조각</p><h2>조각 정보</h2></div><button id="pieceCloseButton" class="icon-button">×</button></div><div class="piece-detail"><div class="piece-number-badge" id="pieceNumberBadge">#1</div><dl class="piece-detail-list"><div><dt>읽은 사람</dt><dd id="pieceNickname">-</dd></div><div><dt>읽은 말씀</dt><dd id="piecePassage">-</dd></div><div><dt>인증 날짜</dt><dd id="pieceDate">-</dd></div><div id="pieceReflectionRow"><dt>한 줄 묵상</dt><dd id="pieceReflection">-</dd></div></dl></div></section></div>
   <div id="toast" class="toast"></div>
-  <script type="module" src="./app.js?v=4"></script>
+  <script type="module" src="./app.js?v=4-2"></script>
 </body>
 </html>
