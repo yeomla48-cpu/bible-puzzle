@@ -123,7 +123,51 @@ async function init(){if(!firebaseConfig?.apiKey||!ADMIN_EMAIL){setStatus("error
 el.loginForm.addEventListener("submit",e=>{e.preventDefault();const n=el.nickname.value.trim();if(n.length<2){el.loginError.textContent="닉네임은 2글자 이상 입력해 주세요.";return}nickname=n;localStorage.setItem(STORAGE_KEY,nickname);el.loginError.textContent="";showApp();showToast(`${nickname}님, 반가워요!`)});
 el.changeUserButton.addEventListener("click",()=>{localStorage.removeItem(STORAGE_KEY);nickname="";showApp()});el.bookSelect.addEventListener("change",syncChapters);el.startChapter.addEventListener("input",updateChapterInfo);el.endChapter.addEventListener("input",updateChapterInfo);
 el.readingForm.addEventListener("submit",async e=>{e.preventDefault();const p=activePuzzle(),r=chapterResult();if(!p){el.readingError.textContent="현재 진행 중인 퍼즐이 없습니다.";return}if(!r.valid){el.readingError.textContent=r.message;return}const key=`${p.id}_${dateKey()}_${hex(normalizeNickname(nickname))}`,button=el.readingForm.querySelector("button[type=submit]");button.disabled=true;try{await setDoc(doc(db,"records",key),{recordKey:key,puzzleId:p.id,nickname,nicknameLower:normalizeNickname(nickname),book:selectedBook().name,startChapter:+el.startChapter.value,endChapter:+el.endChapter.value,chapterCount:r.count,pieceCount:1,reflection:el.reflection.value.trim(),date:dateKey(),ownerUid:currentUser.uid,createdAt:serverTimestamp(),createdAtMs:Date.now()});el.reflection.value="";el.readingError.textContent="";showToast(`${r.count}장 인증 완료! 퍼즐 1조각이 열렸어요.`)}catch(err){el.readingError.textContent=err?.code==="permission-denied"?"오늘은 이미 인증했습니다. 내일 다시 참여해 주세요.":friendly(err)}finally{renderStats();button.disabled=false}});
+el.adminLoginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
 
+  const password = el.adminPassword.value;
+  const loginButton = el.adminLoginForm.querySelector(
+    'button[type="submit"]'
+  );
+
+  if (!password) {
+    el.adminLoginError.textContent = "관리자 비밀번호를 입력해 주세요.";
+    return;
+  }
+
+  loginButton.disabled = true;
+  el.adminLoginError.textContent = "";
+
+  try {
+    // 현재 익명 계정에서 로그아웃
+    if (auth.currentUser?.isAnonymous) {
+      await signOut(auth);
+    }
+
+    // 관리자 이메일과 입력한 비밀번호로 로그인
+    await signInWithEmailAndPassword(
+      auth,
+      ADMIN_EMAIL,
+      password
+    );
+
+    el.adminPassword.value = "";
+    showToast("관리자 로그인에 성공했습니다.");
+  } catch (error) {
+    el.adminLoginError.textContent =
+      error?.code === "auth/invalid-credential"
+        ? "관리자 비밀번호가 올바르지 않습니다."
+        : friendly(error);
+
+    // 관리자 로그인 실패 시 다시 익명 로그인
+    if (!auth.currentUser) {
+      await ensureAnonymous();
+    }
+  } finally {
+    loginButton.disabled = false;
+  }
+});
 function openAdmin(){el.adminModal.classList.remove("hidden");el.adminLoginSection.classList.toggle("hidden",isAdmin);el.adminDashboardSection.classList.toggle("hidden",!isAdmin);if(isAdmin)renderAdmin()};function closeAdmin(){el.adminModal.classList.add("hidden")};el.adminOpenButton.addEventListener("click",openAdmin);el.adminCloseButton.addEventListener("click",closeAdmin);el.adminModal.querySelector("[data-close-admin]").addEventListener("click",closeAdmin);
 el.adminLogoutButton.addEventListener("click", async () => {
   try {
