@@ -25,7 +25,22 @@ const normalizeNickname=(v)=>v.trim().toLocaleLowerCase("ko-KR").replace(/\s+/g,
 const hex=(v)=>Array.from(new TextEncoder().encode(v)).map(b=>b.toString(16).padStart(2,"0")).join("");
 const activePuzzle=()=>puzzles.find(p=>p.id===activePuzzleId)||puzzles.find(p=>p.status==="active")||null;
 const activeRecords=()=>{const p=activePuzzle();return p?records.filter(r=>r.puzzleId===p.id):[]};
-const friendly=(e)=>{console.error(e);if(e?.code==="permission-denied")return "이미 오늘 인증했거나 권한이 없습니다.";if(e?.code==="auth/invalid-credential")return "관리자 비밀번호를 확인해 주세요.";return "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."};
+const friendly = (e) => {
+  // 로그인 전환 중 생기는 예상된 권한 오류는 콘솔에 출력하지 않음
+  if (e?.code !== "permission-denied") {
+    console.error(e);
+  }
+
+  if (e?.code === "permission-denied") {
+    return "이미 오늘 인증했거나 권한이 없습니다.";
+  }
+
+  if (e?.code === "auth/invalid-credential") {
+    return "관리자 비밀번호를 확인해 주세요.";
+  }
+
+  return "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+};
 
 function setStatus(type,title,text){el.firebaseStatus.classList.remove("connected","error");if(type)el.firebaseStatus.classList.add(type);el.firebaseStatusTitle.textContent=title;el.firebaseStatusText.textContent=text;}
 function setReadingDisabled(v){el.readingForm.querySelectorAll("input,select,textarea,button").forEach(n=>n.disabled=v)};
@@ -111,20 +126,33 @@ el.readingForm.addEventListener("submit",async e=>{e.preventDefault();const p=ac
 
 function openAdmin(){el.adminModal.classList.remove("hidden");el.adminLoginSection.classList.toggle("hidden",isAdmin);el.adminDashboardSection.classList.toggle("hidden",!isAdmin);if(isAdmin)renderAdmin()};function closeAdmin(){el.adminModal.classList.add("hidden")};el.adminOpenButton.addEventListener("click",openAdmin);el.adminCloseButton.addEventListener("click",closeAdmin);el.adminModal.querySelector("[data-close-admin]").addEventListener("click",closeAdmin);
 el.adminLogoutButton.addEventListener("click", async () => {
-  // 기존 Firestore 실시간 감시 종료
-  unsubRecords?.();
-  unsubPuzzles?.();
-  unsubSettings?.();
+  try {
+    ready = false;
 
-  unsubRecords = null;
-  unsubPuzzles = null;
-  unsubSettings = null;
+    // 관리자 권한으로 실행 중인 실시간 감시 종료
+    unsubRecords?.();
+    unsubPuzzles?.();
+    unsubSettings?.();
 
-  await signOut(auth);
-  await ensureAnonymous();
+    unsubRecords = null;
+    unsubPuzzles = null;
+    unsubSettings = null;
 
-  closeAdmin();
-  showToast("관리자에서 로그아웃했습니다.");
+    // 감시가 완전히 종료되도록 잠시 기다림
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // 관리자 로그아웃
+    await signOut(auth);
+
+    // 익명 사용자 로그인
+    await signInAnonymously(auth);
+
+    closeAdmin();
+    showToast("관리자에서 로그아웃했습니다.");
+  } catch (error) {
+    console.error("관리자 로그아웃 처리 실패:", error);
+    showToast("로그아웃 처리 중 오류가 발생했습니다.");
+  }
 });
 const buildUrl=n=>`./puzzles/${encodeURIComponent(n)}`;const sizeText=s=>s<1048576?`${(s/1024).toFixed(1)}KB`:`${(s/1048576).toFixed(1)}MB`;function clearFile(){if(objectUrl)URL.revokeObjectURL(objectUrl);selectedFile=null;objectUrl="";el.photoPreviewBox.classList.add("hidden");el.photoRegisterButton.disabled=true;el.photoAutoPath.textContent="사진을 선택하면 표시됩니다."}
 el.photoFile.addEventListener("change",()=>{const f=el.photoFile.files?.[0];el.photoUploadError.textContent="";if(!f)return clearFile();if(!["image/jpeg","image/png","image/webp"].includes(f.type)||f.size>10*1024*1024){el.photoUploadError.textContent="JPG, PNG, WEBP 10MB 이하 파일만 가능합니다.";el.photoFile.value="";return clearFile()}if(objectUrl)URL.revokeObjectURL(objectUrl);selectedFile=f;objectUrl=URL.createObjectURL(f);el.photoPreviewImage.src=objectUrl;el.photoFileName.textContent=f.name;el.photoFileInfo.textContent=sizeText(f.size);el.photoPreviewBox.classList.remove("hidden");el.photoAutoPath.textContent=buildUrl(f.name);el.photoRegisterButton.disabled=false;if(!el.photoTitle.value.trim())el.photoTitle.value=f.name.replace(/\.[^.]+$/,"")});
