@@ -10,7 +10,7 @@ const BIBLE_BOOKS = [
 
 const $ = (s) => document.querySelector(s);
 const el = {
- firebaseStatus:$("#firebaseStatus"),firebaseStatusTitle:$("#firebaseStatusTitle"),firebaseStatusText:$("#firebaseStatusText"),loginSection:$("#loginSection"),appSection:$("#appSection"),loginForm:$("#loginForm"),nickname:$("#nickname"),loginError:$("#loginError"),currentNickname:$("#currentNickname"),changeUserButton:$("#changeUserButton"),todayLabel:$("#todayLabel"),currentPieces:$("#currentPieces"),todayParticipants:$("#todayParticipants"),myPieces:$("#myPieces"),progressPercent:$("#progressPercent"),activePhotoTitle:$("#activePhotoTitle"),activePhotoPeriod:$("#activePhotoPeriod"),pieceCounter:$("#pieceCounter"),progressBar:$("#progressBar"),photoPuzzle:$("#photoPuzzle"),photoCoverGrid:$("#photoCoverGrid"),noPhotoState:$("#noPhotoState"),readingForm:$("#readingForm"),bookSelect:$("#bookSelect"),startChapter:$("#startChapter"),endChapter:$("#endChapter"),chapterInfo:$("#chapterInfo"),reflection:$("#reflection"),readingError:$("#readingError"),todayAuthBadge:$("#todayAuthBadge"),leaderboard:$("#leaderboard"),emptyLeaderboard:$("#emptyLeaderboard"),recordList:$("#recordList"),emptyRecords:$("#emptyRecords"),archiveList:$("#archiveList"),emptyArchive:$("#emptyArchive"),toast:$("#toast"),adminOpenButton:$("#adminOpenButton"),adminModal:$("#adminModal"),adminCloseButton:$("#adminCloseButton"),adminLoginSection:$("#adminLoginSection"),adminDashboardSection:$("#adminDashboardSection"),adminLoginForm:$("#adminLoginForm"),adminPassword:$("#adminPassword"),adminLoginError:$("#adminLoginError"),adminLogoutButton:$("#adminLogoutButton"),photoUploadForm:$("#photoUploadForm"),photoTitle:$("#photoTitle"),photoPieceCount:$("#photoPieceCount"),photoStartDate:$("#photoStartDate"),photoEndDate:$("#photoEndDate"),photoFile:$("#photoFile"),photoPreviewBox:$("#photoPreviewBox"),photoPreviewImage:$("#photoPreviewImage"),photoFileName:$("#photoFileName"),photoFileInfo:$("#photoFileInfo"),photoAutoPath:$("#photoAutoPath"),photoRegisterButton:$("#photoRegisterButton"),photoUploadError:$("#photoUploadError"),photoCountBadge:$("#photoCountBadge"),emptyPhotoList:$("#emptyPhotoList"),adminPhotoList:$("#adminPhotoList"),pieceModal:$("#pieceModal"),pieceCloseButton:$("#pieceCloseButton"),pieceNumberBadge:$("#pieceNumberBadge"),pieceNickname:$("#pieceNickname"),piecePassage:$("#piecePassage"),pieceDate:$("#pieceDate"),pieceReflection:$("#pieceReflection"),pieceReflectionRow:$("#pieceReflectionRow")
+ firebaseStatus:$("#firebaseStatus"),firebaseStatusTitle:$("#firebaseStatusTitle"),firebaseStatusText:$("#firebaseStatusText"),loginSection:$("#loginSection"),appSection:$("#appSection"),loginForm:$("#loginForm"),nickname:$("#nickname"),loginError:$("#loginError"),currentNickname:$("#currentNickname"),changeUserButton:$("#changeUserButton"),todayLabel:$("#todayLabel"),currentPieces:$("#currentPieces"),todayParticipants:$("#todayParticipants"),myPieces:$("#myPieces"),progressPercent:$("#progressPercent"),activePhotoTitle:$("#activePhotoTitle"),activePhotoPeriod:$("#activePhotoPeriod"),pieceCounter:$("#pieceCounter"),progressBar:$("#progressBar"),photoPuzzle:$("#photoPuzzle"),photoCoverGrid:$("#photoCoverGrid"),noPhotoState:$("#noPhotoState"),readingForm:$("#readingForm"),bookSelect:$("#bookSelect"),startChapter:$("#startChapter"),endChapter:$("#endChapter"),chapterInfo:$("#chapterInfo"),reflection:$("#reflection"),readingError:$("#readingError"),todayAuthBadge:$("#todayAuthBadge"),leaderboard:$("#leaderboard"),emptyLeaderboard:$("#emptyLeaderboard"),recordList:$("#recordList"),emptyRecords:$("#emptyRecords"),archiveList:$("#archiveList"),emptyArchive:$("#emptyArchive"),upcomingList:$("#upcomingList"),emptyUpcoming:$("#emptyUpcoming"),upcomingCountBadge:$("#upcomingCountBadge"),toast:$("#toast"),adminOpenButton:$("#adminOpenButton"),adminModal:$("#adminModal"),adminCloseButton:$("#adminCloseButton"),adminLoginSection:$("#adminLoginSection"),adminDashboardSection:$("#adminDashboardSection"),adminLoginForm:$("#adminLoginForm"),adminPassword:$("#adminPassword"),adminLoginError:$("#adminLoginError"),adminLogoutButton:$("#adminLogoutButton"),photoUploadForm:$("#photoUploadForm"),photoTitle:$("#photoTitle"),photoPieceCount:$("#photoPieceCount"),photoStartDate:$("#photoStartDate"),photoEndDate:$("#photoEndDate"),photoFile:$("#photoFile"),photoPreviewBox:$("#photoPreviewBox"),photoPreviewImage:$("#photoPreviewImage"),photoFileName:$("#photoFileName"),photoFileInfo:$("#photoFileInfo"),photoAutoPath:$("#photoAutoPath"),photoRegisterButton:$("#photoRegisterButton"),photoUploadError:$("#photoUploadError"),photoCountBadge:$("#photoCountBadge"),emptyPhotoList:$("#emptyPhotoList"),adminPhotoList:$("#adminPhotoList"),pieceModal:$("#pieceModal"),pieceCloseButton:$("#pieceCloseButton"),pieceNumberBadge:$("#pieceNumberBadge"),pieceNickname:$("#pieceNickname"),piecePassage:$("#piecePassage"),pieceDate:$("#pieceDate"),pieceReflection:$("#pieceReflection"),pieceReflectionRow:$("#pieceReflectionRow")
 };
 
 let auth,db,currentUser=null,isAdmin=false,ready=false;
@@ -61,9 +61,137 @@ function renderPuzzle(){const p=activePuzzle(),rs=activeRecords().sort((a,b)=>(a
 function renderStats(){const ars=activeRecords(),today=dateKey(),mine=ars.filter(r=>normalizeNickname(r.nickname)===normalizeNickname(nickname));el.todayParticipants.textContent=`${new Set(ars.filter(r=>r.date===today).map(r=>normalizeNickname(r.nickname))).size}명`;el.myPieces.textContent=`${mine.length}조각`;const done=ars.some(r=>r.date===today&&normalizeNickname(r.nickname)===normalizeNickname(nickname));el.todayAuthBadge.textContent=done?"오늘 인증 완료":"인증 가능";el.todayAuthBadge.classList.toggle("done",done);setReadingDisabled(!ready||!activePuzzle()||done)}
 function renderLeaderboard(){const counts=new Map();for(const r of activeRecords())counts.set(r.nickname,(counts.get(r.nickname)||0)+1);const sorted=[...counts].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"ko"));el.emptyLeaderboard.classList.toggle("hidden",sorted.length>0);el.leaderboard.innerHTML=sorted.map(([name,count],i)=>`<div class="leader-row"><span class="leader-rank">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><span class="leader-name">${esc(name)}</span><span class="leader-count">${count}조각</span></div>`).join("")}
 function renderRecords(){const rs=activeRecords().sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0)).slice(0,12);el.emptyRecords.classList.toggle("hidden",rs.length>0);el.recordList.innerHTML=rs.map(r=>`<article class="record-card"><div class="record-top"><div><span class="record-name">${esc(r.nickname)}</span><p class="record-range">${esc(r.book)} ${r.startChapter}${r.startChapter===r.endChapter?"":`~${r.endChapter}`}장</p></div><span class="record-meta">${esc(formatDate(r.date))}</span></div>${r.reflection?`<p class="record-text">${esc(r.reflection)}</p>`:""}</article>`).join("")}
-function renderArchive(){const archived=puzzles.filter(p=>p.status!=="active").sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0));el.emptyArchive.classList.toggle("hidden",archived.length>0);el.archiveList.innerHTML=archived.map(p=>{const count=records.filter(r=>r.puzzleId===p.id).length;return`<article class="archive-item"><img class="archive-thumb" src="${esc(p.downloadURL)}" alt="${esc(p.title)}"><div class="archive-body"><h3>${esc(p.title)}</h3><div class="archive-meta">${p.status==="completed"?"완료":"대기"} · ${Math.min(count,p.totalPieces||1)} / ${p.totalPieces||1}조각</div></div></article>`}).join("")}
+function createArchivedPuzzleGrid(puzzle, puzzleRecords) {
+  const total = Math.max(1, Number(puzzle.totalPieces) || 1);
+  const opened = Math.min(puzzleRecords.length, total);
+  const { cols, rows } = gridSize(total);
+  const order = seededShuffle(total, puzzle.id);
+  const rankByPos = new Map(order.map((pos, rank) => [pos, rank]));
+
+  const grid = document.createElement("div");
+  grid.className = "archive-puzzle-grid";
+  grid.style.display = "grid";
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  grid.style.aspectRatio = `${cols} / ${rows}`;
+  grid.style.width = "100%";
+  grid.style.overflow = "hidden";
+  grid.style.borderRadius = "14px";
+  grid.style.background = "#dfe7df";
+
+  for (let pos = 0; pos < cols * rows; pos++) {
+    const tile = document.createElement("div");
+    tile.className = "archive-puzzle-tile";
+    tile.style.minWidth = "0";
+    tile.style.minHeight = "0";
+    tile.style.border = "1px solid rgba(255,255,255,0.28)";
+    tile.style.backgroundColor = "#dfe7df";
+
+    const rank = rankByPos.get(pos);
+
+    if (rank !== undefined && rank < opened) {
+      const col = pos % cols;
+      const row = Math.floor(pos / cols);
+
+      tile.style.backgroundImage = `url("${puzzle.downloadURL}")`;
+      tile.style.backgroundRepeat = "no-repeat";
+      tile.style.backgroundSize = `${cols * 100}% ${rows * 100}%`;
+      tile.style.backgroundPosition =
+        `${cols === 1 ? 0 : (col / (cols - 1)) * 100}% ` +
+        `${rows === 1 ? 0 : (row / (rows - 1)) * 100}%`;
+    }
+
+    grid.appendChild(tile);
+  }
+
+  return grid;
+}
+
+function renderArchive() {
+  const completed = puzzles
+    .filter(p => p.status === "completed")
+    .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+
+  el.emptyArchive.classList.toggle("hidden", completed.length > 0);
+  el.archiveList.innerHTML = "";
+
+  for (const puzzle of completed) {
+    const puzzleRecords = records
+      .filter(r => r.puzzleId === puzzle.id)
+      .sort((a, b) => (a.createdAtMs || 0) - (b.createdAtMs || 0));
+
+    const total = Math.max(1, Number(puzzle.totalPieces) || 1);
+    const opened = Math.min(puzzleRecords.length, total);
+
+    const item = document.createElement("article");
+    item.className = "archive-item";
+
+    const preview = document.createElement("div");
+    preview.className = "archive-thumb";
+    preview.innerHTML = "";
+    preview.appendChild(createArchivedPuzzleGrid(puzzle, puzzleRecords));
+
+    const body = document.createElement("div");
+    body.className = "archive-body";
+    body.innerHTML = `
+      <h3>${esc(puzzle.title)}</h3>
+      <div class="archive-meta">
+        ${opened.toLocaleString()} / ${total.toLocaleString()}조각 공개
+      </div>
+      <p class="helper-text">
+        공개되지 않은 조각은 보관 후에도 계속 가려집니다.
+      </p>
+    `;
+
+    item.append(preview, body);
+    el.archiveList.appendChild(item);
+  }
+}
+
+function renderUpcoming() {
+  const waiting = puzzles
+    .filter(p => p.status === "waiting")
+    .sort((a, b) => {
+      const aDate = a.startDate || "9999-12-31";
+      const bDate = b.startDate || "9999-12-31";
+      return aDate.localeCompare(bDate) ||
+        (a.createdAtMs || 0) - (b.createdAtMs || 0);
+    });
+
+  el.upcomingCountBadge.textContent = `${waiting.length}개`;
+  el.emptyUpcoming.classList.toggle("hidden", waiting.length > 0);
+
+  el.upcomingList.innerHTML = waiting.map(puzzle => {
+    const period = [
+      puzzle.startDate && `시작 ${formatDate(puzzle.startDate)}`,
+      puzzle.endDate && `종료 ${formatDate(puzzle.endDate)}`
+    ].filter(Boolean).join(" · ");
+
+    return `
+      <article class="archive-item upcoming-item">
+        <div
+          class="archive-thumb upcoming-lock"
+          aria-hidden="true"
+          style="display:grid;place-items:center;font-size:2rem;background:#eef2ee;"
+        >
+          🔒
+        </div>
+
+        <div class="archive-body">
+          <h3>${esc(puzzle.title)}</h3>
+          <div class="archive-meta">
+            ${period || "진행 기간 미정"} ·
+            총 ${Math.max(1, Number(puzzle.totalPieces) || 1).toLocaleString()}조각
+          </div>
+          <p class="helper-text">아직 공개되지 않은 퍼즐입니다.</p>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
 function renderAdmin(){el.photoCountBadge.textContent=`${puzzles.length}개`;el.emptyPhotoList.classList.toggle("hidden",puzzles.length>0);el.adminPhotoList.innerHTML=puzzles.sort((a,b)=>(b.createdAtMs||0)-(a.createdAtMs||0)).map(p=>{const count=records.filter(r=>r.puzzleId===p.id).length;const status=p.status||"waiting";return`<article class="admin-photo-item"><img src="${esc(p.downloadURL)}" alt=""><div class="admin-photo-info"><h4>${esc(p.title)}</h4><p><span class="status-${status}">${status==="active"?"진행 중":status==="completed"?"완료":"대기"}</span> · ${count} / ${p.totalPieces||1}조각</p><p>${p.startDate||p.endDate?`${p.startDate||"미정"} ~ ${p.endDate||"미정"}`:"기간 미설정"}</p></div><div class="admin-photo-actions">${status!=="active"?`<button data-activate="${p.id}">진행하기</button>`:""}<button class="secondary-button" data-edit="${p.id}">조각수 수정</button>${status==="active"?`<button class="secondary-button" data-complete="${p.id}">완료/보관</button>`:""}<button class="danger-button" data-delete="${p.id}">삭제</button></div></article>`}).join("")}
-function renderAll(){el.todayLabel.textContent=new Intl.DateTimeFormat("ko-KR",{month:"long",day:"numeric",weekday:"short"}).format(new Date());renderPuzzle();renderStats();renderLeaderboard();renderRecords();renderArchive();if(isAdmin)renderAdmin()}
+function renderAll(){el.todayLabel.textContent=new Intl.DateTimeFormat("ko-KR",{month:"long",day:"numeric",weekday:"short"}).format(new Date());renderPuzzle();renderStats();renderLeaderboard();renderRecords();renderArchive();renderUpcoming();if(isAdmin)renderAdmin()}
 
 async function ensureAnonymous(){if(!auth.currentUser)await signInAnonymously(auth)}
 function subscribe() {
