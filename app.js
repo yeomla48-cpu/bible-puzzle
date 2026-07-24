@@ -51,7 +51,58 @@ function renderAdmin(){el.photoCountBadge.textContent=`${puzzles.length}개`;el.
 function renderAll(){el.todayLabel.textContent=new Intl.DateTimeFormat("ko-KR",{month:"long",day:"numeric",weekday:"short"}).format(new Date());renderPuzzle();renderStats();renderLeaderboard();renderRecords();renderArchive();if(isAdmin)renderAdmin()}
 
 async function ensureAnonymous(){if(!auth.currentUser)await signInAnonymously(auth)}
-function subscribe(){unsubRecords?.();unsubPuzzles?.();unsubSettings?.();unsubRecords=onSnapshot(collection(db,"records"),s=>{records=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()},e=>setStatus("error","기록 불러오기 실패",friendly(e)));unsubPuzzles=onSnapshot(collection(db,"photos"),s=>{puzzles=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()});unsubSettings=onSnapshot(doc(db,"settings","main"),s=>{activePuzzleId=s.exists()?s.data().activePhotoId||"":"";renderAll()})}
+function subscribe() {
+  unsubRecords?.();
+  unsubPuzzles?.();
+  unsubSettings?.();
+
+  unsubRecords = onSnapshot(
+    collection(db, "records"),
+    snapshot => {
+      records = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+      renderAll();
+    },
+    error => {
+      if (error?.code !== "permission-denied") {
+        setStatus("error", "기록 불러오기 실패", friendly(error));
+      }
+    }
+  );
+
+  unsubPuzzles = onSnapshot(
+    collection(db, "photos"),
+    snapshot => {
+      puzzles = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+      renderAll();
+    },
+    error => {
+      if (error?.code !== "permission-denied") {
+        console.error(error);
+      }
+    }
+  );
+
+  unsubSettings = onSnapshot(
+    doc(db, "settings", "main"),
+    snapshot => {
+      activePuzzleId = snapshot.exists()
+        ? snapshot.data().activePhotoId || ""
+        : "";
+      renderAll();
+    },
+    error => {
+      if (error?.code !== "permission-denied") {
+        console.error(error);
+      }
+    }
+  );
+}
 async function init(){if(!firebaseConfig?.apiKey||!ADMIN_EMAIL){setStatus("error","Firebase 설정 필요","firebase-config.js를 확인해 주세요.");return}try{const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);onAuthStateChanged(auth,async user=>{currentUser=user;isAdmin=Boolean(user?.email&&user.email.toLowerCase()===ADMIN_EMAIL.toLowerCase());el.adminLoginSection.classList.toggle("hidden",isAdmin);el.adminDashboardSection.classList.toggle("hidden",!isAdmin);if(!user){await ensureAnonymous();return}ready=true;setStatus("connected","온라인 연결됨","기록과 퍼즐이 실시간으로 동기화됩니다.");subscribe();renderAll()});await ensureAnonymous()}catch(e){setStatus("error","Firebase 연결 실패",friendly(e))}}
 
 el.loginForm.addEventListener("submit",e=>{e.preventDefault();const n=el.nickname.value.trim();if(n.length<2){el.loginError.textContent="닉네임은 2글자 이상 입력해 주세요.";return}nickname=n;localStorage.setItem(STORAGE_KEY,nickname);el.loginError.textContent="";showApp();showToast(`${nickname}님, 반가워요!`)});
@@ -59,7 +110,22 @@ el.changeUserButton.addEventListener("click",()=>{localStorage.removeItem(STORAG
 el.readingForm.addEventListener("submit",async e=>{e.preventDefault();const p=activePuzzle(),r=chapterResult();if(!p){el.readingError.textContent="현재 진행 중인 퍼즐이 없습니다.";return}if(!r.valid){el.readingError.textContent=r.message;return}const key=`${p.id}_${dateKey()}_${hex(normalizeNickname(nickname))}`,button=el.readingForm.querySelector("button[type=submit]");button.disabled=true;try{await setDoc(doc(db,"records",key),{recordKey:key,puzzleId:p.id,nickname,nicknameLower:normalizeNickname(nickname),book:selectedBook().name,startChapter:+el.startChapter.value,endChapter:+el.endChapter.value,chapterCount:r.count,pieceCount:1,reflection:el.reflection.value.trim(),date:dateKey(),ownerUid:currentUser.uid,createdAt:serverTimestamp(),createdAtMs:Date.now()});el.reflection.value="";el.readingError.textContent="";showToast(`${r.count}장 인증 완료! 퍼즐 1조각이 열렸어요.`)}catch(err){el.readingError.textContent=err?.code==="permission-denied"?"오늘은 이미 인증했습니다. 내일 다시 참여해 주세요.":friendly(err)}finally{renderStats();button.disabled=false}});
 
 function openAdmin(){el.adminModal.classList.remove("hidden");el.adminLoginSection.classList.toggle("hidden",isAdmin);el.adminDashboardSection.classList.toggle("hidden",!isAdmin);if(isAdmin)renderAdmin()};function closeAdmin(){el.adminModal.classList.add("hidden")};el.adminOpenButton.addEventListener("click",openAdmin);el.adminCloseButton.addEventListener("click",closeAdmin);el.adminModal.querySelector("[data-close-admin]").addEventListener("click",closeAdmin);
-el.adminLoginForm.addEventListener("submit",async e=>{e.preventDefault();try{await signInWithEmailAndPassword(auth,ADMIN_EMAIL,el.adminPassword.value);el.adminPassword.value="";showToast("관리자로 로그인했습니다.")}catch(err){el.adminLoginError.textContent=friendly(err)}});el.adminLogoutButton.addEventListener("click",async()=>{await signOut(auth);await ensureAnonymous();closeAdmin();showToast("관리자에서 로그아웃했습니다.")});
+el.adminLogoutButton.addEventListener("click", async () => {
+  // 기존 Firestore 실시간 감시 종료
+  unsubRecords?.();
+  unsubPuzzles?.();
+  unsubSettings?.();
+
+  unsubRecords = null;
+  unsubPuzzles = null;
+  unsubSettings = null;
+
+  await signOut(auth);
+  await ensureAnonymous();
+
+  closeAdmin();
+  showToast("관리자에서 로그아웃했습니다.");
+});
 const buildUrl=n=>`./puzzles/${encodeURIComponent(n)}`;const sizeText=s=>s<1048576?`${(s/1024).toFixed(1)}KB`:`${(s/1048576).toFixed(1)}MB`;function clearFile(){if(objectUrl)URL.revokeObjectURL(objectUrl);selectedFile=null;objectUrl="";el.photoPreviewBox.classList.add("hidden");el.photoRegisterButton.disabled=true;el.photoAutoPath.textContent="사진을 선택하면 표시됩니다."}
 el.photoFile.addEventListener("change",()=>{const f=el.photoFile.files?.[0];el.photoUploadError.textContent="";if(!f)return clearFile();if(!["image/jpeg","image/png","image/webp"].includes(f.type)||f.size>10*1024*1024){el.photoUploadError.textContent="JPG, PNG, WEBP 10MB 이하 파일만 가능합니다.";el.photoFile.value="";return clearFile()}if(objectUrl)URL.revokeObjectURL(objectUrl);selectedFile=f;objectUrl=URL.createObjectURL(f);el.photoPreviewImage.src=objectUrl;el.photoFileName.textContent=f.name;el.photoFileInfo.textContent=sizeText(f.size);el.photoPreviewBox.classList.remove("hidden");el.photoAutoPath.textContent=buildUrl(f.name);el.photoRegisterButton.disabled=false;if(!el.photoTitle.value.trim())el.photoTitle.value=f.name.replace(/\.[^.]+$/,"")});
 function imageExists(url){return new Promise(res=>{const i=new Image();i.onload=()=>res(true);i.onerror=()=>res(false);i.src=`${url}?v=${Date.now()}`})}
