@@ -16,7 +16,7 @@ const el = {
 let auth,db,currentUser=null,isAdmin=false,ready=false;
 let nickname=localStorage.getItem(STORAGE_KEY)||"", records=[], puzzles=[], activePuzzleId="", selectedFile=null, objectUrl="";
 let unsubRecords,unsubPuzzles,unsubSettings;
-
+let authChanging = false;
 const dateKey=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
 const esc=(v)=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 const showToast=(m)=>{el.toast.textContent=m;el.toast.classList.add("show");clearTimeout(showToast.t);showToast.t=setTimeout(()=>el.toast.classList.remove("show"),2600)};
@@ -118,34 +118,79 @@ function subscribe() {
     }
   );
 }
-async function init(){if(!firebaseConfig?.apiKey||!ADMIN_EMAIL){setStatus("error","Firebase 설정 필요","firebase-config.js를 확인해 주세요.");return}try{const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);onAuthStateChanged(auth,async user=>{currentUser=user;isAdmin=Boolean(user?.email&&user.email.toLowerCase()===ADMIN_EMAIL.toLowerCase());el.adminLoginSection.classList.toggle("hidden",isAdmin);el.adminDashboardSection.classList.toggle("hidden",!isAdmin);if(!user){await ensureAnonymous();return}ready=true;setStatus("connected","온라인 연결됨","기록과 퍼즐이 실시간으로 동기화됩니다.");subscribe();renderAll()});await ensureAnonymous()}catch(e){setStatus("error","Firebase 연결 실패",friendly(e))}}
+async function init() {
+  if (!firebaseConfig?.apiKey || !ADMIN_EMAIL) {
+    setStatus(
+      "error",
+      "Firebase 설정 필요",
+      "firebase-config.js를 확인해 주세요."
+    );
+    return;
+  }
 
+  try {
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+
+      isAdmin = Boolean(
+        user?.email &&
+        user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()
+      );
+
+      el.adminLoginSection.classList.toggle("hidden", isAdmin);
+      el.adminDashboardSection.classList.toggle("hidden", !isAdmin);
+
+   if (!user) {
+  ready = false;
+  return;
+}
+
+      ready = true;
+
+      setStatus(
+        "connected",
+        "온라인 연결됨",
+        "기록과 퍼즐이 실시간으로 동기화됩니다."
+      );
+
+      subscribe();
+      renderAll();
+    });
+
+    await ensureAnonymous();
+  } catch (error) {
+    setStatus(
+      "error",
+      "Firebase 연결 실패",
+      friendly(error)
+    );
+  }
+}
 el.loginForm.addEventListener("submit",e=>{e.preventDefault();const n=el.nickname.value.trim();if(n.length<2){el.loginError.textContent="닉네임은 2글자 이상 입력해 주세요.";return}nickname=n;localStorage.setItem(STORAGE_KEY,nickname);el.loginError.textContent="";showApp();showToast(`${nickname}님, 반가워요!`)});
 el.changeUserButton.addEventListener("click",()=>{localStorage.removeItem(STORAGE_KEY);nickname="";showApp()});el.bookSelect.addEventListener("change",syncChapters);el.startChapter.addEventListener("input",updateChapterInfo);el.endChapter.addEventListener("input",updateChapterInfo);
 el.readingForm.addEventListener("submit",async e=>{e.preventDefault();const p=activePuzzle(),r=chapterResult();if(!p){el.readingError.textContent="현재 진행 중인 퍼즐이 없습니다.";return}if(!r.valid){el.readingError.textContent=r.message;return}const key=`${p.id}_${dateKey()}_${hex(normalizeNickname(nickname))}`,button=el.readingForm.querySelector("button[type=submit]");button.disabled=true;try{await setDoc(doc(db,"records",key),{recordKey:key,puzzleId:p.id,nickname,nicknameLower:normalizeNickname(nickname),book:selectedBook().name,startChapter:+el.startChapter.value,endChapter:+el.endChapter.value,chapterCount:r.count,pieceCount:1,reflection:el.reflection.value.trim(),date:dateKey(),ownerUid:currentUser.uid,createdAt:serverTimestamp(),createdAtMs:Date.now()});el.reflection.value="";el.readingError.textContent="";showToast(`${r.count}장 인증 완료! 퍼즐 1조각이 열렸어요.`)}catch(err){el.readingError.textContent=err?.code==="permission-denied"?"오늘은 이미 인증했습니다. 내일 다시 참여해 주세요.":friendly(err)}finally{renderStats();button.disabled=false}});
 el.adminLoginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const password = el.adminPassword.value;
-  const loginButton = el.adminLoginForm.querySelector(
-    'button[type="submit"]'
-  );
+  const password = el.adminPassword.value.trim();
+  const loginButton =
+    el.adminLoginForm.querySelector('button[type="submit"]');
 
   if (!password) {
-    el.adminLoginError.textContent = "관리자 비밀번호를 입력해 주세요.";
+    el.adminLoginError.textContent =
+      "관리자 비밀번호를 입력해 주세요.";
     return;
   }
 
   loginButton.disabled = true;
   el.adminLoginError.textContent = "";
+  authChanging = true;
 
   try {
-    // 현재 익명 계정에서 로그아웃
-    if (auth.currentUser?.isAnonymous) {
-      await signOut(auth);
-    }
-
-    // 관리자 이메일과 입력한 비밀번호로 로그인
     await signInWithEmailAndPassword(
       auth,
       ADMIN_EMAIL,
@@ -155,16 +200,17 @@ el.adminLoginForm.addEventListener("submit", async (event) => {
     el.adminPassword.value = "";
     showToast("관리자 로그인에 성공했습니다.");
   } catch (error) {
-    el.adminLoginError.textContent =
-      error?.code === "auth/invalid-credential"
-        ? "관리자 비밀번호가 올바르지 않습니다."
-        : friendly(error);
+    console.error("관리자 로그인 오류:", error);
 
-    // 관리자 로그인 실패 시 다시 익명 로그인
-    if (!auth.currentUser) {
-      await ensureAnonymous();
+    if (error?.code === "auth/invalid-credential") {
+      el.adminLoginError.textContent =
+        "관리자 비밀번호가 올바르지 않습니다.";
+    } else {
+      el.adminLoginError.textContent =
+        "관리자 로그인 중 오류가 발생했습니다.";
     }
   } finally {
+    authChanging = false;
     loginButton.disabled = false;
   }
 });
