@@ -1148,3 +1148,163 @@ textarea:disabled {
 .piece-detail{display:flex;gap:18px;align-items:flex-start}.piece-number-badge{padding:14px;border-radius:14px;background:var(--primary-soft);font-weight:900}.piece-detail-list{flex:1;margin:0}.piece-detail-list>div{display:grid;grid-template-columns:100px 1fr;padding:11px 0;border-bottom:1px solid var(--border)}.piece-detail-list dt{color:var(--muted);font-weight:700}.piece-detail-list dd{margin:0;font-weight:700}
 @media(max-width:860px){.dashboard-grid,.photo-picker-layout{grid-template-columns:1fr}.recent-card{grid-column:auto}.archive-list{grid-template-columns:1fr 1fr}.admin-photo-item{grid-template-columns:70px 1fr}.admin-photo-item img{width:70px;height:54px}.admin-photo-actions{grid-column:1/-1;justify-content:flex-start}}
 @media(max-width:560px){.site-header{padding-top:26px}.stats-grid{grid-template-columns:1fr 1fr}.archive-list{grid-template-columns:1fr}.photo-puzzle,.no-photo-state{min-height:230px}.date-fields,.chapter-grid{grid-template-columns:1fr}.admin-toolbar{flex-direction:column}.piece-detail{flex-direction:column}}
+
+
+/* =========================================================
+   v4-2: 지난 퍼즐 보관함 + 진행 예정 퍼즐
+   ========================================================= */
+
+.archive-card,
+.upcoming-card {
+  margin-top: 18px;
+}
+
+.archive-list,
+.upcoming-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.archive-item {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface-strong);
+  box-shadow: 0 10px 28px rgba(64, 77, 68, 0.06);
+}
+
+.archive-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #e4e8e2;
+}
+
+.archive-thumb .archive-puzzle-grid {
+  width: 100%;
+  height: 100%;
+  border-radius: 0 !important;
+}
+
+.archive-puzzle-tile {
+  min-width: 0;
+  min-height: 0;
+  background-color: #dfe5de !important;
+  border: 0.5px solid rgba(255, 255, 255, 0.32) !important;
+  background-repeat: no-repeat;
+}
+
+.archive-body {
+  padding: 16px;
+}
+
+.archive-body h3 {
+  margin: 0 0 7px;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  letter-spacing: -0.025em;
+}
+
+.archive-meta {
+  color: var(--primary-dark);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.archive-body .helper-text {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.upcoming-card {
+  border-color: rgba(81, 112, 93, 0.16);
+  background:
+    linear-gradient(145deg, rgba(255, 253, 247, 0.96), rgba(239, 244, 239, 0.96));
+}
+
+.upcoming-item {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  min-height: 126px;
+  align-items: stretch;
+}
+
+.upcoming-item .archive-thumb {
+  width: 118px;
+  height: 100%;
+  min-height: 126px;
+  aspect-ratio: auto;
+  border-right: 1px solid var(--border);
+}
+
+.upcoming-lock {
+  display: grid !important;
+  place-items: center;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,0.9), transparent 34%),
+    linear-gradient(145deg, #edf2ed, #dfe7df) !important;
+  color: var(--primary-dark);
+  font-size: 2rem !important;
+}
+
+.upcoming-item .archive-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#emptyArchive,
+#emptyUpcoming {
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  margin-top: 16px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+@media (max-width: 860px) {
+  .archive-list,
+  .upcoming-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .upcoming-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .archive-list,
+  .upcoming-list {
+    grid-template-columns: 1fr;
+  }
+
+  .archive-card,
+  .upcoming-card {
+    margin-top: 14px;
+  }
+
+  .upcoming-item {
+    grid-template-columns: 88px minmax(0, 1fr);
+    min-height: 112px;
+  }
+
+  .upcoming-item .archive-thumb {
+    width: 88px;
+    min-height: 112px;
+  }
+
+  .archive-body {
+    padding: 14px;
+  }
+
+  .archive-body h3 {
+    font-size: 0.95rem;
+  }
+}
